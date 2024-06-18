@@ -1,0 +1,328 @@
+{% extends "layouts/module_admin.html" %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="YandexHome">Yandex Home</a></li>
+{% endblock %}
+{% block module %}
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<div id="edit_device">
+    <form @submit.prevent="updateDevice">
+        <div class="input-group my-3">
+            <span class="input-group-text" id="inputGroup-sizing-sm">Name</span>
+            <input type="text" class="form-control" id="name" v-model="device.title">
+        </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="inputGroup-sizing-sm">Description</span>
+            <input type="text" class="form-control" id="name" v-model="device.description">
+        </div>
+        <div class="input-group mb-3">
+                <span class="input-group-text" id="inputGroup-sizing-sm">Type</span>
+                <span class="input-group-text" id="inputGroup-sizing-sm">
+                    <img :src="'/YandexHome/static/devices/'+ device.type +'.png'" height="30px" :alt="device.type" onError="this.src='/YandexHome/static/YandexHome.png'"/>
+                </span>
+                <select id="type-select"  class="form-control selectpicker" v-model="device.type">
+                    <option v-for="value,key in devices_types" :value="key" :key="key" data-thumbnail="images/icon-chrome.png">
+                        [[ value ]]
+                    </option>
+                </select>
+        </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="inputGroup-sizing-sm">Room</span>
+            <input type="text" class="form-control" id="name" v-model="device.room">
+        </div>
+        <button class="btn btn-primary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+            Advanced
+         </button>
+        <div class="collapse" id="collapseExample">
+          <div class="card card-body">
+            <div class="input-group mb-3">
+                <span class="input-group-text" id="inputGroup-sizing-sm">Manufacturer</span>
+                <input type="text" class="form-control" id="name" v-model="device.manufacturer">
+            </div>
+            <div class="input-group mb-3">
+                <span class="input-group-text" id="inputGroup-sizing-sm">Model</span>
+                <input type="text" class="form-control" id="name" v-model="device.model">
+            </div>
+            <div class="input-group mb-3">
+                <span class="input-group-text" id="inputGroup-sizing-sm">SW version</span>
+                <input type="text" class="form-control" id="name" v-model="device.sw_version">
+            </div>
+            <div class="input-group mb-3">
+                <span class="input-group-text" id="inputGroup-sizing-sm">HW version</span>
+                <input type="text" class="form-control" id="name" v-model="device.hw_version">
+            </div>
+          </div>
+        </div>
+        <div class="dropdown mt-3">
+            <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+              Add capability
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+              <li v-for="(item, key) in devices_instance">
+                <h6 v-if="key=='controls_locked'" class="dropdown-header">Actions</h6>
+                <h6 v-if="key=='amperage_sensor'" class="dropdown-header">Sensors number</h6>
+                <h6 v-if="key=='vibration_sensor'" class="dropdown-header">Sensors bool</h6>
+                <a :class="'dropdown-item ms-3' + (key in device.capability ? ' disabled' :'')" href="#" @click="addCapability(item)">[[ item.description ]]</a>
+              </li>
+            </ul>
+        </div>
+        <div class="list-group" v-if="Object.keys(device.capability).length > 0">
+            <div class="list-group-item list-group-item-action" v-for="item,key in device.capability" :key="'cap_'+key">
+                [[ item.description ]]
+                <div class="d-flex align-items-start">
+                    <div>
+                        <select-with-filter placeholder="Select object" :options="objectOptions" v-model="item.linked_object" @changed="item.linked_property = null" style="min-width: 300px;max-width: 300px;"></select-with-filter>
+                    </div>
+                    <div>
+                        <select-with-filter placeholder="Select property" v-if="item.linked_object && item.linked_object in objects" :options="objects[item.linked_object].properties" v-model="item.linked_property"  style="min-width: 300px;max-width: 300px;"></select-with-filter>
+                    </div>
+                    <div class="form-check mt-2 mx-2">
+                        <input class="form-check-input" type="checkbox" v-model="item.reportable" id="flexCheckDefault">
+                        <label class="form-check-label" for="flexCheckDefault">
+                            Reportable
+                        </label>
+                    </div>
+                    <div v-if="devices_instance[item.type].capability ==='on_off'" class="form-check mt-2 mx-2">
+                        <input class="form-check-input" type="checkbox" v-model="item.split" id="flexCheckDefault">
+                        <label class="form-check-label" for="flexCheckDefault">
+                            Split
+                        </label>
+                    </div>
+                    <a class="btn btn-danger ms-2 ms-auto" @click="delCapability(key)"><i class="fas fa-trash"></i></a>
+                </div>
+                <div v-if="devices_instance[item.type].parameters && 'range' in devices_instance[item.type].parameters" class="d-inline-flex mb-2">
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text" id="inputGroup-sizing-sm">Min</span>
+                        <input type="number" class="form-control" aria-label="Min" v-model="item.min">
+                    </div>
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text" id="inputGroup-sizing-sm">Max</span>
+                        <input type="number" class="form-control" aria-label="Max" v-model="item.max">
+                    </div>
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text" id="inputGroup-sizing-sm">Precision</span>
+                        <input type="number" class="form-control" aria-label="Precision" v-model="item.precision">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="my-2 mt-3">
+            <button class="btn btn-success" type="submit">
+                <span v-if="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Save
+            </button>
+            <a href="YandexHome" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    <p>[[ message ]]</p>
+</div>
+<script>
+Vue.component('select-with-filter', {
+    delimiters: ['[[', ']]'],
+    props: ['options','value','placeholder'],
+    data() {
+        return {
+            search: '',
+            isOpen: false,
+            selectedKey: null,
+            initialSet: true
+        };
+    },
+    watch: {
+        value(newVal) {
+            console.log(newVal)
+            this.selectedKey = newVal;
+        },
+        selectedKey(newVal) {
+            if (!this.initialSet) {
+                this.$emit('changed', newVal);
+            }
+            this.$emit('input', newVal);
+            this.initialSet = false; // После первого изменения установим в false
+        }
+    },
+    computed: {
+        filteredOptions() {
+            return Object.keys(this.options).filter(key => 
+                (key + this.options[key]).toLowerCase().includes(this.search.toLowerCase())
+            );
+            
+        },
+        selectedDescription() {
+            return this.selectedKey ? this.selectedKey + " - " + this.options[this.selectedKey] : this.placeholder;
+        }
+    },
+    methods: {
+        selectOption(key) {
+            this.selectedKey = key;
+            this.isOpen = false;
+            this.search = '';
+        },
+        toggleDropdown() {
+            this.isOpen = !this.isOpen;
+        },
+        handleClickOutside(event) {
+            if (!this.$el.contains(event.target)) {
+                this.isOpen = false;
+            }
+        }
+    },
+    mounted() {
+        document.addEventListener('click', this.handleClickOutside);
+        this.selectedKey = this.value;
+    },
+    beforeDestroy() {
+        document.removeEventListener('click', this.handleClickOutside);
+    },
+    template: `
+        <div class="mb-3">
+            <input 
+                type="text" 
+                v-model="search" 
+                @focus="isOpen = true" 
+                @input="isOpen = true"
+                class="form-control" 
+                :placeholder="selectedDescription"
+            >
+            <div v-if="isOpen" class="list-group card position-absolute w-150" style="z-index: 1050;">
+                <button 
+                    v-for="key in filteredOptions" 
+                    :key="key" 
+                    class="list-group-item list-group-item-action"
+                    @mousedown.prevent
+                    @click="selectOption(key)"
+                >
+                    [[ key ]] - [[ options[key] ]]
+                </button>
+            </div>
+        </div>
+    `
+});
+
+    new Vue({
+        el: '#edit_device',
+        delimiters: ['[[', ']]'], // Измененные разделители
+        data: {
+            isSaving: false,
+            device: {
+                id: '', // Идентификатор 
+                title: '',
+                description: '',
+                type: null,
+                room:"",
+                description:"",
+                manufacturer:"",
+                model:"",
+                sw_version:"",
+                hw_version:"",
+                capability:{},
+            },
+            message: '',
+            devices_types:[],
+            devices_instance:[],
+            objects:[],
+            isOpen:false,
+            
+        },
+        async created() {
+            await this.fetchTypes()
+            await this.fetchObjects()
+            const deviceId = '{{id}}';
+           //this.message = deviceId
+            if (deviceId != 'None')
+                this.fetchDevice(deviceId);
+        },
+        computed:{
+            objectOptions(){
+                list = {}
+                Object.keys(this.objects).forEach(key => {
+                    list[key] = this.objects[key].description
+                });
+                return list
+            }
+        },
+        methods: {
+            async fetchTypes(){
+                axios.get(`/YandexHome/types`)
+                    .then(response => {
+                        this.devices_types = response.data.devices_types
+                        this.devices_instance = response.data.devices_instance
+                    })
+                    .catch(error => {
+                        console.log(error)
+                        this.message = 'Error fetching user: ' + error;
+                    });
+            },
+            fetchObjects(){
+                axios.get(`/api/objects/details`)
+                    .then(response => {
+                        this.objects = response.data
+                    })
+                    .catch(error => {
+                        console.log(error)
+                        this.message = 'Error fetching user: ' + error;
+                    });
+            },
+            fetchDevice(deviceId) {
+                // Получение данных пользователя с сервера
+                axios.get(`/YandexHome/device/${deviceId}`)
+                    .then(response => {
+                        var device = response.data;
+                        console.log(device.capability)
+                        device.capability = JSON.parse(device.capability)
+                        this.device = device;
+                    })
+                    .catch(error => {
+                        console.log(error)
+                        this.message = 'Error fetching user: ' + error;
+                    });
+            },
+            updateDevice() {
+                this.isSaving = true
+                this.message = 'Saving...'
+                // Обновление данных пользователя на сервере
+                axios.post(`/YandexHome/device/${this.device.id}`, this.device)
+                    .then(response => {
+                        this.message = 'Device updated successfully!';
+                        this.isSaving = false
+                    })
+                    .catch(error => {
+                        this.message = 'Error updating device: ' + error;
+                        this.isSaving = false
+                    });
+            },
+            addCapability(item){
+                console.log('add', item)
+                cap = {
+                    "type":item.instance_name,
+                    "description":item.description,
+                    "linked_object": null,
+                    "linked_property":null,
+                    "reportable": false,
+                }
+                if ('parameters' in this.devices_instance[item.instance_name]){
+                    if ('range' in this.devices_instance[item.instance_name]['parameters'])
+                    {
+                        cap['min'] = this.devices_instance[item.instance_name]['parameters']['range']['min']
+                        cap['max'] = this.devices_instance[item.instance_name]['parameters']['range']['max']
+                        cap['precision'] = this.devices_instance[item.instance_name]['parameters']['range']['precision']
+                    }
+                    if ('split' in this.devices_instance[item.instance_name]['parameters'])
+                    {
+                        cap['split'] = this.devices_instance[item.instance_name]['parameters']['split']
+                    }
+                }
+                this.$set(this.device.capability, item.instance_name, cap);
+                console.log(this.device)
+            },
+            delCapability(key) {
+                // Удаляем запись из словаря
+                this.$delete(this.device.capability, key);
+            },
+        }
+    });
+</script>
+    
+{% endblock %}

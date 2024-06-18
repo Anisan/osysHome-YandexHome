@@ -1,0 +1,157 @@
+{% extends "layouts/module_admin.html" %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="YandexHome">Yandex Home</a></li>
+{% endblock %}
+{% block module %}
+<a href="https://dialogs.yandex.ru/developer"><img src="/YandexHome/static/YandexHome.png" height="30px"></img></a>
+<button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
+    Settings
+</button>
+<a href="?op=add" class="btn btn-primary" title="Add">Add device</a>
+<div class="table-responsive">
+    <table class="table table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Room</th>
+                <th>Link</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for device in devices %}
+            <tr>
+                <td class="py-1">
+                    <img src="/YandexHome/static/devices/{{ device.type }}.png" height="50px" onError="this.src='/YandexHome/static/YandexHome.png'">
+                    {{ device.title }}
+                </td>
+                <td class="py-1">{{ device.description }}</td>
+                <td class="py-1">{{ device.type }}</td>
+                <td class="py-1">{{ device.room }}</td>
+                <td class="py-1">
+                    {% for key,item in device.caps.items() %}
+                    <div>
+                    <b>{{key}}</b> ({{ item.linked_object }}.{{ item.linked_property }})
+                    </div>
+                    {% endfor %}
+                </td>
+                <td class="py-1" width="1%" nowrap>
+                    <div>
+                        <a href="?op=edit&device={{device.id}}" class="btn btn-secondary" title="Edit"><i
+                                class="feather icon-edit"></i></a>
+                        <a href="?op=delete&device={{device.id}}"
+                            onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-danger"
+                            title="Delete"><i class="feather icon-trash"></i></a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Модальное окно с настройками -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <!-- Поля формы -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.user_id.label(class="form-label") }}
+                        {{ form.user_id(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.user_password.label(class="form-label") }}
+                        {{ form.user_password(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.client_id.label(class="form-label") }}
+                        <div data-mdb-input-init class="input-group mb-3">
+                            {{ form.client_id(class="form-control") }}
+                            <span class="input-group-text" onclick="genKey1();">
+                                <i class="fas fa-sync"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.client_secret.label(class="form-label") }}
+                        <div data-mdb-input-init class="input-group mb-3">
+                            {{ form.client_secret(class="form-control") }}
+                            <span class="input-group-text" onclick="genKey2();">
+                                <i class="fas fa-sync"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.client_key.label(class="form-label") }}
+                        <div data-mdb-input-init class="input-group mb-3">
+                            {{ form.client_key(class="form-control") }}
+                            <a class="input-group-text" style="text-decoration: none;" href="https://yandex.ru/dev/dialogs/smart-home/doc/reference-alerts/resources-alerts.html#resources-alerts__oauth" target="_blank">
+                                <i class="fas fa-info-circle"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.skill_id.label(class="form-label") }}
+                        <div data-mdb-input-init class="input-group mb-3">
+                            {{ form.skill_id(class="form-control") }}
+                            <a class="input-group-text" style="text-decoration: none;" href="https://dialogs.yandex.ru/developer" target="_blank">
+                                <i class="fas fa-info-circle"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function getRandomHexSymbol() {
+  const hexSymbols = '0123456789abcdef';
+  return hexSymbols[getRandomInt(0, hexSymbols.length - 1)];
+}
+function getRandomHexString(length) {
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += getRandomHexSymbol();
+  }
+  return result;
+}
+// Функция для генерации ключа типа a7d85ca965b0-45b8a121
+function genKey1() {
+  const part1 = getRandomHexString(12); // Первая часть 12 символов
+  const part2 = getRandomHexString(8);  // Вторая часть 8 символов
+  var element = document.getElementById("client_id");
+  if (element) 
+    element.value = `${part1}-${part2}`;
+}
+
+// Функция для генерации ключа типа 9a93c379-e526-47d5-a621-35cf0569c0c5
+function genKey2() {
+  const part1 = getRandomHexString(8);  // Первая часть 8 символов
+  const part2 = getRandomHexString(4);  // Вторая часть 4 символа
+  const part3 = getRandomHexString(4);  // Третья часть 4 символа
+  const part4 = getRandomHexString(4);  // Четвертая часть 4 символа
+  const part5 = getRandomHexString(12); // Пятая часть 12 символов
+  var element = document.getElementById("client_secret");
+  if (element) 
+    element.value = `${part1}-${part2}-${part3}-${part4}-${part5}`;
+}
+</script>
+{% endblock %}

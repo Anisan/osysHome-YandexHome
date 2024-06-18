@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta id="viewport" name="viewport" content="width=device-width, initial-scale=1" />
+<title>osysHome</title>        
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="{{ config.ASSETS_ROOT }}/fonts/fontawesome/css/fontawesome-all.min.css">
+<link href="{{ config.ASSETS_ROOT }}/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<section class="vh-100">
+    <div class="container py-5 h-100">
+      <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+          <div class="card shadow-2-strong" style="border-radius: 1rem;">
+            <div class="card-body p-4 text-center">
+  
+              <h3 class="mb-3">osysHome -> YandexHome</h3>
+              <span class="mb-0 text-muted">
+                {% if login_failed %}
+                    <span class="text-danger">Неправильное имя и/или пароль</span>
+                {% endif %} 
+              </span>
+              <form role="form" method="POST">
+
+                <div data-mdb-input-init class="form-outline input-group  mb-3">
+                  <span class="input-group-text" id="basic-addon1"><i class="fas fa-user"></i></span>
+                  <input type="text" name="username" placeholder="Username" class="form-control form-control-lg"/>
+                </div>
+  
+                <div data-mdb-input-init class="form-outline  input-group mb-3">
+                  <span class="input-group-text" id="basic-addon1"><i class="fas fa-lock"></i></span>
+                  <input type="password" name="password" placeholder="Password" class="form-control form-control-lg"/>
+                </div>
+
+                <button data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-lg btn-block"
+                  type="submit" name="login">Login</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
