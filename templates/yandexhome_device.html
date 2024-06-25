@@ -256,7 +256,7 @@ Vue.component('select-with-filter', {
                     });
             },
             fetchObjects(){
-                axios.get(`/api/objects/details`)
+                axios.get(`/api/object/list/details`)
                     .then(response => {
                         this.objects = response.data
                     })
@@ -287,6 +287,7 @@ Vue.component('select-with-filter', {
                     .then(response => {
                         this.message = 'Device updated successfully!';
                         this.isSaving = false
+                        window.location.href = 'YandexHome';
                     })
                     .catch(error => {
                         this.message = 'Error updating device: ' + error;

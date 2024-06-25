@@ -163,11 +163,11 @@ class YandexHome(BasePlugin):
                         parameters['instance'] = instance_name
                     if 'range' in parameters:
                         if 'min' in trait:
-                            parameters['range']['min'] = trait['min']
+                            parameters['range']['min'] = int(trait['min'])
                         if 'max' in trait:
-                            parameters['range']['max'] = trait['max']
+                            parameters['range']['max'] = int(trait['max'])
                         if 'precision' in trait:
-                            parameters['range']['precision'] = trait['precision']
+                            parameters['range']['precision'] = int(trait['precision'])
                     if 'split' in parameters:
                         if 'split' in trait:
                             parameters['split'] = trait['split']
@@ -496,8 +496,9 @@ class YandexHome(BasePlugin):
                             value = 'detected' if value==1 else 'not_detected'
                         elif instance == 'water_leak_sensor':
                             value = 'leak' if value==1 else 'dry'
-                        #elif instance == 'rgb':
-                        #    value = '#'+value
+                        elif instance == 'rgb':
+                            value = value.lstrip('#')
+                            value = int(value, 16)
                         elif instance == 'open_sensor':
                             value = 'closed' if value==1 else 'opened'
                         elif instance in ['open','volume','channel','humidity','brightness','temperature','temperature_k']:
@@ -573,8 +574,8 @@ class YandexHome(BasePlugin):
                                 value = 1 if value == 'leak' else 0
                             elif instance == 'open-sensor':
                                 value = 1 if value == 'opened' else 0
-                            #elif instance == 'rgb':
-                            #    value = 1 if value == 'opened' else 0
+                            elif instance == 'rgb':
+                                value = hex(value)[2:]
 
                             setProperty(linked_object+"."+linked_property, value, self.name)
 
@@ -638,18 +639,6 @@ class YandexHome(BasePlugin):
                 user_id = f.read()
                 request.user_id = user_id
                 return user_id
-        else:
-            return None
-
-    # Function to load device info
-    def get_device(self, device_id):
-        filename = os.path.join(config.DEVICES_DIRECTORY, device_id + ".json")
-        if os.path.isfile(filename) and os.access(filename, os.R_OK):
-            with open(filename, mode='r') as f:
-                text = f.read()
-                data = json.loads(text)
-                data['id'] = device_id
-                return data
         else:
             return None
 
