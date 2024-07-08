@@ -37,7 +37,7 @@ from flask import request, render_template, send_from_directory, jsonify, redire
 from app.core.main.BasePlugin import BasePlugin
 from app.core.lib.cache import findInCache, saveToCache
 from app.core.lib.object import getProperty, setProperty
-from app.database import row2dict
+from app.database import row2dict, session_scope
 from plugins.YandexHome.forms.SettingsForm import SettingsForm
 from plugins.YandexHome.models.YandexHomeDevices import Device
 from plugins.YandexHome.constants import devices_types, devices_instance
@@ -74,10 +74,11 @@ class YandexHome(BasePlugin):
         if op == 'delete':
             id = request.args.get("device", None)
             from sqlalchemy import delete
-            sql = delete(Device).where(Device.id == int(id))
-            self.session.execute(sql)
-            self.session.commit()
-            return redirect(self.name)
+            with session_scope() as session:
+                sql = delete(Device).where(Device.id == int(id))
+                session.execute(sql)
+                session.commit()
+                return redirect(self.name)
 
         settings = SettingsForm()
         if request.method == 'GET':
@@ -211,87 +212,87 @@ class YandexHome(BasePlugin):
             return
         
         find = False
-        
-        devices = self.session.query(Device).filter(Device.capability.contains(obj),Device.capability.contains(prop)).all()
-        for device in devices:
-            dev=[]
-            caps = json.loads(device.capability)
-            for instance, cap in caps.items():
-                if cap['linked_object'] == obj and cap['linked_property'] == prop:
+        with session_scope() as session:
+            devices = session.query(Device).filter(Device.capability.contains(obj),Device.capability.contains(prop)).all()
+            for device in devices:
+                dev=[]
+                caps = json.loads(device.capability)
+                for instance, cap in caps.items():
+                    if cap['linked_object'] == obj and cap['linked_property'] == prop:
 
-                    if 'reportable' not in cap or not cap['reportable']:
-                        continue #skip
+                        if 'reportable' not in cap or not cap['reportable']:
+                            continue #skip
 
-                    find = True
-                    self.logger.debug("send value to yandexhome server %s %s",instance, value)
+                        find = True
+                        self.logger.debug("send value to yandexhome server %s %s",instance, value)
 
-                    capabilities = []
-                    properties = []
-                    state = {}
+                        capabilities = []
+                        properties = []
+                        state = {}
 
-                    # send new value
-                    if devices_instance[cap['type']]['capability'] in ['float', 'event']:
-                        state['instance'] = cap['type'].replace('_sensor', '')
-                    else:
-                        state['instance'] = cap['type']
+                        # send new value
+                        if devices_instance[cap['type']]['capability'] in ['float', 'event']:
+                            state['instance'] = cap['type'].replace('_sensor', '')
+                        else:
+                            state['instance'] = cap['type']
 
-                    if cap['type'] in ['on', 'mute', 'pause', 'backlight', 'keep_warm', 'ionization', 'oscillation', 'controls_locked']:
-                        state['value'] = bool(value)
-                    elif cap['type'] in ['amperage_sensor', 'battery_level_sensor', 'co2_level_sensor', 'humidity_sensor', 'illumination_sensor', 'pm1_density_sensor', 'pm2.5_density_sensor', 'pm10_density_sensor', 'power_sensor', 'pressure_sensor', 'temperature_sensor', 'tvoc_sensor', 'voltage_sensor', 'water_level_sensor']:
-                        state['value'] = float(value)
-                    elif cap['type'] in ['vibration_sensor', 'motion_sensor', 'smoke_sensor', 'gas_sensor']:
-                        state['value'] = 'detected' if value else 'not_detected'
-                    elif cap['type'] == 'water_leak_sensor':
-                        state['value'] = 'leak' if value else 'dry'
-                    elif cap['type'] == 'rgb':
-                        value = value.lstrip('#')
-                        state['value'] = int(value, 16)
-                    elif cap['type'] == 'open_sensor':
-                        state['value'] = 'closed' if value==1 else 'opened'
-                    elif cap['type'] in ['open', 'volume', 'channel', 'humidity', 'brightness', 'temperature', 'temperature_k']:
-                        state['value'] = int(value)
-                    else:
-                        state['value'] = value
+                        if cap['type'] in ['on', 'mute', 'pause', 'backlight', 'keep_warm', 'ionization', 'oscillation', 'controls_locked']:
+                            state['value'] = bool(value)
+                        elif cap['type'] in ['amperage_sensor', 'battery_level_sensor', 'co2_level_sensor', 'humidity_sensor', 'illumination_sensor', 'pm1_density_sensor', 'pm2.5_density_sensor', 'pm10_density_sensor', 'power_sensor', 'pressure_sensor', 'temperature_sensor', 'tvoc_sensor', 'voltage_sensor', 'water_level_sensor']:
+                            state['value'] = float(value)
+                        elif cap['type'] in ['vibration_sensor', 'motion_sensor', 'smoke_sensor', 'gas_sensor']:
+                            state['value'] = 'detected' if value else 'not_detected'
+                        elif cap['type'] == 'water_leak_sensor':
+                            state['value'] = 'leak' if value else 'dry'
+                        elif cap['type'] == 'rgb':
+                            value = value.lstrip('#')
+                            state['value'] = int(value, 16)
+                        elif cap['type'] == 'open_sensor':
+                            state['value'] = 'closed' if value==1 else 'opened'
+                        elif cap['type'] in ['open', 'volume', 'channel', 'humidity', 'brightness', 'temperature', 'temperature_k']:
+                            state['value'] = int(value)
+                        else:
+                            state['value'] = value
 
-                    if devices_instance[cap['type']]['capability'] in ['float', 'event']:
-                        properties.append({
-                            'type': f"{PREFIX_PROPERTIES}{devices_instance[cap['type']]['capability']}",
-                            'state': state
+                        if devices_instance[cap['type']]['capability'] in ['float', 'event']:
+                            properties.append({
+                                'type': f"{PREFIX_PROPERTIES}{devices_instance[cap['type']]['capability']}",
+                                'state': state
+                            })
+                        else:
+                            capabilities.append({
+                                'type': f"{PREFIX_CAPABILITIES}{devices_instance[cap['type']]['capability']}",
+                                'state': state
+                            })
+
+                        dev.append({
+                            "id": str(device.id),
+                            'capabilities': capabilities,
+                            'properties': properties
                         })
-                    else:
-                        capabilities.append({
-                            'type': f"{PREFIX_CAPABILITIES}{devices_instance[cap['type']]['capability']}",
-                            'state': state
-                        })
 
-                    dev.append({
-                        "id": str(device.id),
-                        'capabilities': capabilities,
-                        'properties': properties
-                    })
+                        payload = {
+                            "user_id": self.config['USER_ID'],
+                            "devices": dev
+                        }
 
-                    payload = {
-                        "user_id": self.config['USER_ID'],
-                        "devices": dev
-                    }
+                        send = {
+                            'ts': int(time.time()),
+                            'payload': payload
+                        }
 
-                    send = {
-                        'ts': int(time.time()),
-                        'payload': payload
-                    }
+                        log_message = f"PropertySetHandle send: {json.dumps(send)}"
+                        self.logger.debug(log_message)  # Assuming WriteLog writes to the console or replace with appropriate logging function
+                        skill = self.config['SKILL_ID']
+                        url = f"https://dialogs.yandex.net/api/v1/skills/{skill}/callback/state"
+                        headers = {
+                            'Content-type': 'application/json',
+                            'Authorization': f"OAuth {client_key}"
+                        }
+                        
+                        response = requests.post(url, headers=headers, json=send)
 
-                    log_message = f"PropertySetHandle send: {json.dumps(send)}"
-                    self.logger.debug(log_message)  # Assuming WriteLog writes to the console or replace with appropriate logging function
-                    skill = self.config['SKILL_ID']
-                    url = f"https://dialogs.yandex.net/api/v1/skills/{skill}/callback/state"
-                    headers = {
-                        'Content-type': 'application/json',
-                        'Authorization': f"OAuth {client_key}"
-                    }
-                    
-                    response = requests.post(url, headers=headers, json=send)
-
-                    self.logger.debug(f"PropertySetHandle send result: {response.text}")  # Assuming WriteLog writes to the console or replace with appropriate logging function
+                        self.logger.debug(f"PropertySetHandle send result: {response.text}")  # Assuming WriteLog writes to the console or replace with appropriate logging function
 
 
         if not find:
@@ -308,25 +309,26 @@ class YandexHome(BasePlugin):
                 return jsonify(row2dict(dev))
             if request.method == "POST":
                 data = request.get_json()
-                if data['id']:
-                    device = self.session.query(Device).where(Device.id == int(data['id'])).one()
-                else:
-                    device = Device()
-                    self.session.add(device)
-                    self.session.commit()
+                with session_scope() as session:
+                    if data['id']:
+                        device = session.query(Device).where(Device.id == int(data['id'])).one()
+                    else:
+                        device = Device()
+                        session.add(device)
+                        session.commit()
 
-                device.title = data['title']
-                device.description = data['description']
-                device.type = data['type']
-                device.room = data['room']
-                device.description = data['description']
-                device.manufacturer = data['manufacturer']
-                device.model = data['model']
-                device.sw_version = data['sw_version']
-                device.hw_version = data['hw_version']
-                device.capability = json.dumps(data['capability'])
-                device.config = json.dumps(self.generateConfig(device))
-                self.session.commit()
+                    device.title = data['title']
+                    device.description = data['description']
+                    device.type = data['type']
+                    device.room = data['room']
+                    device.description = data['description']
+                    device.manufacturer = data['manufacturer']
+                    device.model = data['model']
+                    device.sw_version = data['sw_version']
+                    device.hw_version = data['hw_version']
+                    device.capability = json.dumps(data['capability'])
+                    device.config = json.dumps(self.generateConfig(device))
+                    session.commit()
                 
                 return 'Device updated successfully', 200
                 
