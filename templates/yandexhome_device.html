@@ -63,7 +63,7 @@
               <li v-for="(item, key) in devices_instance">
                 <h6 v-if="key=='controls_locked'" class="dropdown-header">Actions</h6>
                 <h6 v-if="key=='amperage_sensor'" class="dropdown-header">Sensors number</h6>
-                <h6 v-if="key=='vibration_sensor'" class="dropdown-header">Sensors bool</h6>
+                <h6 v-if="key=='vibration_event'" class="dropdown-header">Sensors event</h6>
                 <a :class="'dropdown-item ms-3' + (key in device.capability ? ' disabled' :'')" href="#" @click="addCapability(item)">[[ item.description ]]</a>
               </li>
             </ul>
@@ -84,7 +84,7 @@
                             Reportable
                         </label>
                     </div>
-                    <div v-if="devices_instance[item.type].capability ==='on_off'" class="form-check mt-2 mx-2">
+                    <div v-if="item.type in devices_instance && devices_instance[item.type].capability ==='on_off'" class="form-check mt-2 mx-2">
                         <input class="form-check-input" type="checkbox" v-model="item.split" id="flexCheckDefault">
                         <label class="form-check-label" for="flexCheckDefault">
                             Split
@@ -92,7 +92,7 @@
                     </div>
                     <a class="btn btn-danger ms-2 ms-auto" @click="delCapability(key)"><i class="fas fa-trash"></i></a>
                 </div>
-                <div v-if="devices_instance[item.type].parameters && 'range' in devices_instance[item.type].parameters" class="d-inline-flex mb-2">
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'range' in devices_instance[item.type].parameters" class="d-inline-flex mb-2">
                     <div class="input-group input-group-sm mb-3">
                         <span class="input-group-text" id="inputGroup-sizing-sm">Min</span>
                         <input type="number" class="form-control" aria-label="Min" v-model="item.min">
@@ -106,11 +106,43 @@
                         <input type="number" class="form-control" aria-label="Precision" v-model="item.precision">
                     </div>
                 </div>
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'modes' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
+                    <div class="dropdown">
+                        <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+                          Add mode
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                          <li v-for="mode in devices_instance[item.type].parameters.modes">
+                            <a class="dropdown-item ms-3" href="#" @click="addMode(key,mode)">[[ mode.value ]]</a>
+                          </li>
+                        </ul>
+                    </div>
+                    <a v-for="mode in item.modes" class="btn btn-outline-danger ms-2" href="#" @click="delMode(key, mode.value)">
+                        [[ mode.value ]]
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </div>
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'scenes' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
+                    <div class="dropdown">
+                        <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+                          Add scene
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                          <li v-for="scene in devices_instance[item.type].parameters.scenes">
+                            <a class="dropdown-item ms-3" href="#" @click="addScene(key,scene)">[[ scene.id ]]</a>
+                          </li>
+                        </ul>
+                    </div>
+                    <a v-for="scene in item.scenes" class="btn btn-outline-danger ms-2" href="#" @click="delScene(key, scene.id)">
+                        [[ scene.id ]]
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </div>
             </div>
         </div>
         <div class="my-2 mt-3">
-            <button class="btn btn-success" type="submit">
-                <span v-if="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <button class="btn btn-success" type="submit" :disabled="isSaving">
+                <span v-if="isSaving" class="fas fa-rotate me-2" role="status" aria-hidden="true"></span>
                 Save
             </button>
             <a href="YandexHome" class="btn btn-secondary">Cancel</a>
@@ -143,7 +175,6 @@
             devices_instance:[],
             objects:[],
             isOpen:false,
-            
         },
         async created() {
             await this.fetchTypes()
@@ -233,6 +264,10 @@
                     {
                         cap['split'] = this.devices_instance[item.instance_name]['parameters']['split']
                     }
+                    if ('modes' in this.devices_instance[item.instance_name]['parameters'])
+                        cap['modes'] = this.devices_instance[item.instance_name]['parameters']['modes']
+                    if ('scenes' in this.devices_instance[item.instance_name]['parameters'])
+                        cap['scenes'] = this.devices_instance[item.instance_name]['parameters']['scenes']
                 }
                 this.$set(this.device.capability, item.instance_name, cap);
                 console.log(this.device)
@@ -240,6 +275,22 @@
             delCapability(key) {
                 // Удаляем запись из словаря
                 this.$delete(this.device.capability, key);
+            },
+            addMode(key,value){
+                if ("modes" in this.device.capability[key] == false)
+                    this.$set(this.device.capability[key], 'modes', [])
+                this.device.capability[key].modes.push(value);
+            },
+            delMode(key, value){
+                this.device.capability[key].modes = this.device.capability[key].modes.filter(mode => mode.value !== value);
+            },
+            addScene(key,value){
+                if ("scenes" in this.device.capability[key] == false)
+                    this.$set(this.device.capability[key], 'scenes', [])
+                this.device.capability[key].scenes.push(value);
+            },
+            delScene(key, value){
+                this.device.capability[key].scenes = this.device.capability[key].scenes.filter(scene => scene.id !== value);
             },
         }
     });

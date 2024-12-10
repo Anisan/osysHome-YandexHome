@@ -33,7 +33,7 @@ import requests
 import urllib
 import traceback
 from sqlalchemy import or_
-from flask import request, render_template, send_from_directory, jsonify, redirect, make_response
+from flask import request, render_template, jsonify, redirect, make_response
 from app.core.main.BasePlugin import BasePlugin
 from app.core.lib.cache import findInCache, saveToCache
 from app.core.lib.object import getProperty, setProperty
@@ -55,7 +55,7 @@ class YandexHome(BasePlugin):
         self.title = "Yandex Home"
         self.description = """Yandex smart home"""
         self.category = "App"
-        self.version = "0.1"
+        self.version = "0.2"
         self.actions = ["search"]
 
         self.last_code = None
@@ -64,17 +64,18 @@ class YandexHome(BasePlugin):
 
     def initialization(self):
         pass
-    
+
     def admin(self, request):
         op = request.args.get("op", None)
         id = request.args.get('device', None)
-        if op == 'add' or  op == 'edit':
+        if op == 'add' or op == 'edit':
             return render_template("yandexhome_device.html", id=id)
-        
+
         if op == 'delete':
             id = request.args.get("device", None)
             from sqlalchemy import delete
             with session_scope() as session:
+                self.delete_device(int(id))
                 sql = delete(Device).where(Device.id == int(id))
                 session.execute(sql)
                 session.commit()
@@ -89,7 +90,7 @@ class YandexHome(BasePlugin):
             settings.client_key.data = self.config.get("CLIENT_KEY",'')
             settings.skill_id.data = self.config.get("SKILL_ID",'')
         else:
-             if settings.validate_on_submit():
+            if settings.validate_on_submit():
                 self.config["USER_ID"] = settings.user_id.data
                 self.config["USER_PASSWORD"] = settings.user_password.data
                 self.config["CLIENT_ID"] = settings.client_id.data
@@ -98,35 +99,38 @@ class YandexHome(BasePlugin):
                 self.config["SKILL_ID"] = settings.skill_id.data
                 self.saveConfig()
         devices = Device.query.all()
-        devs = []
+        devs = {}
         for dev in devices:
             dev = row2dict(dev)
             dev["caps"] = json.loads(dev['capability'])
-            devs.append(dev)
+            if dev['room'] not in devs.keys():
+                devs[dev['room']] = []
+            devs[dev['room']].append(dev)
+        devs = dict(sorted(devs.items()))
         content = {
-             "form": settings,
-             "devices": devs,
+            "form": settings,
+            "devices": devs,
         }
         return self.render('yandexhome_main.html', content)
-    
+
     def search(self, query: str) -> str:
         res = []
         devices = Device.query.filter(or_(Device.title.contains(query),Device.description.contains(query),Device.capability.contains(query))).all()
         for device in devices:
             res.append({"url":f'YandexHome?op=edit&device={device.id}', "title":f'{device.title} ({device.description})', "tags":[{"name":"YandexHome","color":"primary"},{"name":"Device","color":"danger"}]})
-        return res  
-    
+        return res
+
     def make_unsorted_response(self, results_dict: dict, status_code: int):
         resp = make_response({}, status_code)
         j_string = json.dumps(results_dict, separators=(',', ':'))
         resp.set_data(value=j_string)
         return resp
-    
+
     def generateConfig(self, device):
         config = {}
         config["id"] = str(device.id)
         config["name"] = device.title
-        config["type"] = PREFIX_TYPES+device.type
+        config["type"] = PREFIX_TYPES + device.type
         config["room"] = device.room
         config["description"] = device.description
         config["device_info"] = {
@@ -155,12 +159,13 @@ class YandexHome(BasePlugin):
 
                 if devices_instance[trait['type']]['capability'] in ['float', 'event']:
                     instance_name = trait['type'].replace('_sensor', '')
+                    instance_name = instance_name.replace('_event', '')
                 else:
                     instance_name = trait['type']
 
                 if 'parameters' in devices_instance[trait['type']]:
-                    parameters = devices_instance[trait['type']]['parameters']
-                    if trait['type'] not in ['rgb', 'temperature_k']:
+                    parameters = dict(devices_instance[trait['type']]['parameters'])
+                    if trait['type'] not in ['rgb', 'temperature_k', 'color_scene']:
                         parameters['instance'] = instance_name
                     if 'range' in parameters:
                         if 'min' in trait:
@@ -172,6 +177,10 @@ class YandexHome(BasePlugin):
                     if 'split' in parameters:
                         if 'split' in trait:
                             parameters['split'] = trait['split']
+                    if 'modes' in parameters:
+                        parameters["modes"] = trait['modes']
+                    if 'scenes' in parameters:
+                        parameters["scenes"] = trait['scenes']
                 else:
                     parameters['instance'] = instance_name
 
@@ -205,23 +214,23 @@ class YandexHome(BasePlugin):
         config["properties"] = properties
 
         return config
-    
+
     def changeLinkedProperty(self, obj, prop, value):
         client_key = self.config.get("CLIENT_KEY",'')
         if client_key == '':
             return
-        
+
         find = False
         with session_scope() as session:
             devices = session.query(Device).filter(Device.capability.contains(obj),Device.capability.contains(prop)).all()
             for device in devices:
-                dev=[]
+                dev = []
                 caps = json.loads(device.capability)
                 for instance, cap in caps.items():
                     if cap['linked_object'] == obj and cap['linked_property'] == prop:
 
                         if 'reportable' not in cap or not cap['reportable']:
-                            continue #skip
+                            continue  # skip
 
                         find = True
                         self.logger.debug("send value to yandexhome server %s %s",instance, value)
@@ -232,23 +241,25 @@ class YandexHome(BasePlugin):
 
                         # send new value
                         if devices_instance[cap['type']]['capability'] in ['float', 'event']:
-                            state['instance'] = cap['type'].replace('_sensor', '')
+                            instance = cap['type'].replace('_sensor', '')
+                            instance = instance.replace('_event', '')
+                            state['instance'] = instance
                         else:
                             state['instance'] = cap['type']
 
                         if cap['type'] in ['on', 'mute', 'pause', 'backlight', 'keep_warm', 'ionization', 'oscillation', 'controls_locked']:
                             state['value'] = bool(value)
-                        elif cap['type'] in ['amperage_sensor', 'battery_level_sensor', 'co2_level_sensor', 'humidity_sensor', 'illumination_sensor', 'pm1_density_sensor', 'pm2.5_density_sensor', 'pm10_density_sensor', 'power_sensor', 'pressure_sensor', 'temperature_sensor', 'tvoc_sensor', 'voltage_sensor', 'water_level_sensor']:
+                        elif "_sensor" in cap['type']:
                             state['value'] = float(value)
-                        elif cap['type'] in ['vibration_sensor', 'motion_sensor', 'smoke_sensor', 'gas_sensor']:
+                        elif cap['type'] in ['vibration_event', 'motion_event', 'smoke_event', 'gas_event']:
                             state['value'] = 'detected' if value else 'not_detected'
-                        elif cap['type'] == 'water_leak_sensor':
+                        elif cap['type'] == 'water_leak_event':
                             state['value'] = 'leak' if value else 'dry'
                         elif cap['type'] == 'rgb':
                             value = value.lstrip('#')
                             state['value'] = int(value, 16)
-                        elif cap['type'] == 'open_sensor':
-                            state['value'] = 'closed' if value==1 else 'opened'
+                        elif cap['type'] == 'open_event':
+                            state['value'] = 'closed' if value == 1 else 'opened'
                         elif cap['type'] in ['open', 'volume', 'channel', 'humidity', 'brightness', 'temperature', 'temperature_k']:
                             state['value'] = int(value)
                         else:
@@ -289,21 +300,50 @@ class YandexHome(BasePlugin):
                             'Content-type': 'application/json',
                             'Authorization': f"OAuth {client_key}"
                         }
-                        
+
                         response = requests.post(url, headers=headers, json=send)
 
                         self.logger.debug(f"PropertySetHandle send result: {response.text}")  # Assuming WriteLog writes to the console or replace with appropriate logging function
 
-
         if not find:
             removeLinkFromObject(obj,prop,self.name)
-    
-    def route_index(self):
 
+    def discovery(self):
+        client_key = self.config.get("CLIENT_KEY",'')
+        if client_key == '':
+            return
+        skill = self.config['SKILL_ID']
+        url = f"https://dialogs.yandex.net/api/v1/skills/{skill}/callback/discovery"
+        headers = {
+            'Content-type': 'application/json',
+            'Authorization': f"OAuth {client_key}"
+        }
+        payload = {
+            "user_id": self.config['USER_ID'],
+        }
+        send = {
+            'ts': int(time.time()),
+            'payload': payload
+        }
+        response = requests.post(url, headers=headers, json=send)
+        self.logger.info(f"Discovery send result: {response.text}")
+
+    def delete_device(self, device_id):
+        client_key = self.config.get("CLIENT_KEY",'')
+        if client_key == '':
+            return
+        url = f"https://api.iot.yandex.net/v1.0/devices/{device_id}"
+        headers = {
+            'Authorization': f"Bearer {client_key}"
+        }
+        response = requests.delete(url, headers=headers)
+        self.logger.info(f"Delete send result: {response.text}")
+
+    def route_index(self):
         @self.blueprint.route('/YandexHome/device', methods=['POST'])
         @self.blueprint.route('/YandexHome/device/<device_id>', methods=['GET', 'POST'])
         @handle_admin_required
-        def point_device(device_id = None):
+        def point_device(device_id=None):
             if request.method == "GET":
                 dev = Device.get_by_id(device_id)
                 return jsonify(row2dict(dev))
@@ -329,9 +369,10 @@ class YandexHome(BasePlugin):
                     device.capability = json.dumps(data['capability'])
                     device.config = json.dumps(self.generateConfig(device))
                     session.commit()
-                
+
+                    self.discovery()
+
                 return 'Device updated successfully', 200
-                
 
         @self.blueprint.route('/YandexHome/types', methods=['GET'])
         @handle_admin_required
@@ -349,20 +390,18 @@ class YandexHome(BasePlugin):
                     # Ask user for login and password
                     return render_template('login.html')
                 elif request.method == 'POST':
-                    if ("username" not in request.form
-                        or "password" not in request.form
-                        or "state" not in request.args
-                        or "response_type" not in request.args
-                        or request.args["response_type"] != "code"
-                        or "client_id" not in request.args
-                        or request.args["client_id"] != self.config["CLIENT_ID"]):
-                            if "username" in request.form:
-                                request.user_id = request.form['username']
-                            self.logger.error("invalid auth request")
+                    if ("username" not in request.form or
+                        "password" not in request.form or
+                        "state" not in request.args or
+                        "response_type" not in request.args or
+                        request.args["response_type"] != "code" or
+                        "client_id" not in request.args or
+                        request.args["client_id"] != self.config["CLIENT_ID"]): # noqa
+                            self.logger.error("Invalid auth request") # noqa
                             return "Invalid request", 400
                     # Check login and password
                     user = self.get_user(request.form["username"])
-                    if user == None or user["password"] != request.form["password"]:
+                    if user is None or user["password"] != request.form["password"]:
                         self.logger.warning("invalid password")
                         return render_template('login.html', login_failed=True)
 
@@ -371,9 +410,11 @@ class YandexHome(BasePlugin):
                     self.last_code_user = request.form["username"]
                     self.last_code_time = time.time()
 
-                    params = {'state': request.args['state'], 
-                            'code': self.last_code,
-                            'client_id': self.config["CLIENT_ID"]}
+                    params = {
+                        'state': request.args['state'], 
+                        'code': self.last_code,
+                        'client_id': self.config["CLIENT_ID"]
+                    }
                     self.logger.info("code generated")
                     return redirect(request.args["redirect_uri"] + '?' + urllib.parse.urlencode(params))
             except Exception as ex:
@@ -389,8 +430,8 @@ class YandexHome(BasePlugin):
                     or request.form["client_secret"] != self.config["CLIENT_SECRET"]
                     or "client_id" not in request.form
                     or request.form["client_id"] != self.config["CLIENT_ID"]
-                    or "code" not in request.form):
-                        self.logger.error("invalid token request")
+                    or "code" not in request.form): # noqa
+                        self.logger.error("Invalid token request") # noqa
                         return "Invalid request", 400
                 # Check code
                 if request.form["code"] != self.last_code:
@@ -425,6 +466,8 @@ class YandexHome(BasePlugin):
         def unlink():
             try:
                 user_id = self.check_token()
+                if user_id is None:
+                    return "Access denied", 403
                 access_token = self.get_token()
                 request_id = request.headers.get('X-Request-Id')
                 access_token_file = findInCache(access_token, self.name)
@@ -441,7 +484,7 @@ class YandexHome(BasePlugin):
         def devices_list():
             try:
                 user_id = self.check_token()
-                if user_id == None:
+                if user_id is None:
                     return "Access denied", 403
                 request_id = request.headers.get('X-Request-Id')
                 self.logger.debug(f"devices request #{request_id}")
@@ -462,7 +505,7 @@ class YandexHome(BasePlugin):
         def query():
             try:
                 user_id = self.check_token()
-                if user_id == None:
+                if user_id is None:
                     return "Access denied", 403
                 request_id = request.headers.get('X-Request-Id')
                 r = request.get_json()
@@ -474,54 +517,58 @@ class YandexHome(BasePlugin):
                     new_device = {'id': device['id'], 'capabilities': [], 'properties': []}
                     # Load device config
                     dev = Device.get_by_id(device['id'])
+                    if dev is None:
+                        self.delete_device(device['id'])
+                        return jsonify(result)
                     capabilities = json.loads(dev.capability)
-                    print(capabilities)
                     # Call it for every requested capability
                     for instance, capability in capabilities.items():
-                        print(capability)
                         # But skip it if it's not retrievable
-                        if not capability.get("retrievable", True): continue
+                        if not capability.get("retrievable", True):
+                            continue
 
                         linked_object = capability['linked_object']
                         linked_property = capability['linked_property']
-                        value = getProperty(linked_object+"."+linked_property)
+                        value = getProperty(linked_object + "." + linked_property)
 
-                        #todo convert value
+                        # todo convert value
                         if instance in ['on','mute','pause','backlight','keep_warm','ionization','oscillation','controls_locked']:
                             value = value == 1 or value == '1'
-                        elif instance in ['amperage_sensor','battery_level_sensor','co2_level_sensor','humidity_sensor',
-                                        'illumination_sensor','pm1_density_sensor','pm2.5_density_sensor','pm10_density_sensor',
-                                        'power_sensor','pressure_sensor','temperature_sensor','tvoc_sensor',
-                                        'voltage_sensor','water_level_sensor']:
+                        elif "_sensor" in instance:
                             value = float(value)
-                        elif instance in ['vibration_sensor','motion_sensor','smoke_sensor','gas_sensor']:
-                            value = 'detected' if value==1 else 'not_detected'
-                        elif instance == 'water_leak_sensor':
-                            value = 'leak' if value==1 else 'dry'
+                        elif instance in ['vibration_event','motion_event','smoke_event','gas_event']:
+                            value = 'detected' if value == 1 else 'not_detected'
+                        elif instance == 'water_leak_event':
+                            value = 'leak' if value == 1 else 'dry'
                         elif instance == 'rgb':
                             value = value.lstrip('#')
                             value = int(value, 16)
-                        elif instance == 'open_sensor':
-                            value = 'closed' if value==1 else 'opened'
+                        elif instance == 'open_event':
+                            value = 'closed' if value == 1 else 'opened'
                         elif instance in ['open','volume','channel','humidity','brightness','temperature','temperature_k']:
                             value = int(value)
-                        
-                        if devices_instance[capability['type']]['capability'] in ['float', 'event']:
-                            new_device['properties'].append({
-                                'type': PREFIX_PROPERTIES + devices_instance[capability['type']]['capability'],
-                                'state': {
-                                    "instance": instance.replace('_sensor', ''),
-                                    "value": value
-                                }
-                            })
-                        else:
-                            new_device['capabilities'].append({
-                                'type': PREFIX_CAPABILITIES + devices_instance[capability['type']]['capability'],
-                                'state': {
-                                    "instance": instance,
-                                    "value": value
-                                }
-                            })
+                        elif "_event" in instance:
+                            value = str(value)
+
+                        if capability['type'] in devices_instance:
+                            if devices_instance[capability['type']]['capability'] in ['float', 'event']:
+                                instance = instance.replace('_sensor', '')
+                                instance = instance.replace('_event', '')
+                                new_device['properties'].append({
+                                    'type': PREFIX_PROPERTIES + devices_instance[capability['type']]['capability'],
+                                    'state': {
+                                        "instance": instance,
+                                        "value": value
+                                    }
+                                })
+                            else:
+                                new_device['capabilities'].append({
+                                    'type': PREFIX_CAPABILITIES + devices_instance[capability['type']]['capability'],
+                                    'state': {
+                                        "instance": instance,
+                                        "value": value
+                                    }
+                                })
 
                     result['payload']['devices'].append(new_device)
                 self.logger.debug(f"query response #{request_id}: \r\n{json.dumps(result, indent=4)}")
@@ -535,10 +582,12 @@ class YandexHome(BasePlugin):
         def action():
             try:
                 user_id = self.check_token()
-                if user_id == None:
+                if user_id is None:
                     return "Access denied", 403
                 request_id = request.headers.get('X-Request-Id')
                 user = self.get_user(user_id)
+                if user is None:
+                    return "Access denied", 403
                 r = request.get_json()
                 self.logger.debug(f"action request #{request_id}: \r\n{json.dumps(r, indent=4)}")
                 devices_request = r["payload"]["devices"]
@@ -565,24 +614,24 @@ class YandexHome(BasePlugin):
                             linked_property = cap['linked_property']
 
                             if relative:
-                                cur_val = getProperty(linked_object+"."+linked_property)
+                                cur_val = getProperty(linked_object + "." + linked_property)
                                 value = cur_val + value
-                            #todo convert value
-                            if instance in ['on','mute','pause','backlight','keep_warm','ionization','oscillation','controls_locked'] :
+                            # todo convert value
+                            if instance in ['on','mute','pause','backlight','keep_warm','ionization','oscillation','controls_locked']:
                                 value = 1 if value else 0
-                            elif instance in ['motion_sensor','smoke_sensor','gas_sensor']:
+                            elif instance in ['motion_event','smoke_event','gas_event']:
                                 value = 1 if value == 'detected' else 0
-                            elif instance == 'water_leak_sensor':
+                            elif instance == 'water_leak_event':
                                 value = 1 if value == 'leak' else 0
-                            elif instance == 'open-sensor':
+                            elif instance == 'open_event':
                                 value = 1 if value == 'opened' else 0
                             elif instance == 'rgb':
                                 value = hex(value)[2:]
 
-                            setProperty(linked_object+"."+linked_property, value, self.name)
+                            setProperty(linked_object + "." + linked_property, value, self.name)
 
                             new_device['capabilities'].append({
-                                'type': capability['type'],
+                                'type': capability_type,
                                 'state': {
                                     "instance": instance,
                                     "action_result": {
@@ -593,7 +642,7 @@ class YandexHome(BasePlugin):
                         except Exception as ex:
                             self.logger.error(traceback.format_exc())
                             new_device['capabilities'].append({
-                                'type': capability['type'],
+                                'type': capability_type,
                                 'state': {
                                     "instance": instance,
                                     "action_result": {
@@ -609,7 +658,7 @@ class YandexHome(BasePlugin):
             except Exception as ex:
                 self.logger.error(traceback.format_exc())
                 return f"Error {type(ex).__name__}: {str(ex)}", 500
-                    
+
     # Function to load user info
     def get_user(self, user_id):
         request.user_id = user_id
@@ -619,7 +668,7 @@ class YandexHome(BasePlugin):
             }
             return user
         else:
-            self.logger.warning(f"user not found")
+            self.logger.warning(f'User {user_id} not found')
             return None
 
     # Function to retrieve token from header
@@ -629,7 +678,7 @@ class YandexHome(BasePlugin):
         if len(parts) == 2 and parts[0].lower() == 'bearer':
             return parts[1]
         else:
-            self.logger.warning(f"invalid token: {auth}")
+            self.logger.warning(f"Invalid token: {auth}")
             return None
 
     # Function to check current token, returns username
@@ -648,5 +697,3 @@ class YandexHome(BasePlugin):
     def random_string(self, stringLength=8):
         chars = string.ascii_letters + string.digits
         return ''.join(random.choice(chars) for i in range(stringLength))
-        
-        

@@ -15,13 +15,16 @@
                 <th>Title</th>
                 <th>Description</th>
                 <th>Type</th>
-                <th>Room</th>
                 <th>Link</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
-            {% for device in devices %}
+            {% for key, value in devices.items() %}
+            <tr class="table-secondary"><td colspan="6">
+                <b>{{key}}</bb>
+            </td></tr>
+            {% for device in value %}
             <tr>
                 <td class="py-1">
                     <img src="/YandexHome/static/devices/{{ device.type }}.png" height="50px" onError="this.src='/YandexHome/static/YandexHome.png'">
@@ -29,7 +32,6 @@
                 </td>
                 <td class="py-1">{{ device.description }}</td>
                 <td class="py-1">{{ device.type }}</td>
-                <td class="py-1">{{ device.room }}</td>
                 <td class="py-1">
                     {% for key,item in device.caps.items() %}
                     <div>
@@ -47,6 +49,7 @@
                     </div>
                 </td>
             </tr>
+            {% endfor %}
             {% endfor %}
         </tbody>
     </table>
