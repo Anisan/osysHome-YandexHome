@@ -169,11 +169,11 @@ class YandexHome(BasePlugin):
                         parameters['instance'] = instance_name
                     if 'range' in parameters:
                         if 'min' in trait:
-                            parameters['range']['min'] = int(trait['min'])
+                            parameters['range']['min'] = float(trait['min'])
                         if 'max' in trait:
-                            parameters['range']['max'] = int(trait['max'])
+                            parameters['range']['max'] = float(trait['max'])
                         if 'precision' in trait:
-                            parameters['range']['precision'] = int(trait['precision'])
+                            parameters['range']['precision'] = float(trait['precision'])
                     if 'split' in parameters:
                         if 'split' in trait:
                             parameters['split'] = trait['split']
@@ -545,7 +545,9 @@ class YandexHome(BasePlugin):
                             value = int(value, 16)
                         elif instance == 'open_event':
                             value = 'closed' if value == 1 else 'opened'
-                        elif instance in ['open','volume','channel','humidity','brightness','temperature','temperature_k']:
+                        elif instance in ['temperature','temperature_k']:
+                            value = float(value)
+                        elif instance in ['open','volume','channel','humidity','brightness']:
                             value = int(value)
                         elif "_event" in instance:
                             value = str(value)

@@ -103,7 +103,7 @@
                     </div>
                     <div class="input-group input-group-sm mb-3">
                         <span class="input-group-text" id="inputGroup-sizing-sm">Precision</span>
-                        <input type="number" class="form-control" aria-label="Precision" v-model="item.precision">
+                        <input type="number" class="form-control" step="0.1" aria-label="Precision" v-model="item.precision">
                     </div>
                 </div>
                 <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'modes' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
