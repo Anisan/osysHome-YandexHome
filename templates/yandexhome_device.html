@@ -4,8 +4,8 @@
 {% endblock %}
 {% block module %}
 
-<script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/vue/vue@2.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/vue/axios.min.js"></script>
 
 <div id="edit_device">
     <form @submit.prevent="updateDevice">
