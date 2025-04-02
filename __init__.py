@@ -39,7 +39,7 @@ from app.core.lib.cache import findInCache, saveToCache
 from app.core.lib.object import getProperty, setProperty
 from app.database import row2dict, session_scope
 from plugins.YandexHome.forms.SettingsForm import SettingsForm
-from plugins.YandexHome.models.YandexHomeDevices import Device
+from plugins.YandexHome.models.YandexHomeDevices import YaHomeDevice
 from plugins.YandexHome.constants import devices_types, devices_instance
 from app.authentication.handlers import handle_admin_required
 from app.core.lib.object import setLinkToObject, removeLinkFromObject
@@ -76,7 +76,7 @@ class YandexHome(BasePlugin):
             from sqlalchemy import delete
             with session_scope() as session:
                 self.delete_device(int(id))
-                sql = delete(Device).where(Device.id == int(id))
+                sql = delete(YaHomeDevice).where(YaHomeDevice.id == int(id))
                 session.execute(sql)
                 session.commit()
                 return redirect(self.name)
@@ -98,7 +98,7 @@ class YandexHome(BasePlugin):
                 self.config["CLIENT_KEY"] = settings.client_key.data
                 self.config["SKILL_ID"] = settings.skill_id.data
                 self.saveConfig()
-        devices = Device.query.all()
+        devices = YaHomeDevice.query.all()
         devs = {}
         for dev in devices:
             dev = row2dict(dev)
@@ -115,7 +115,7 @@ class YandexHome(BasePlugin):
 
     def search(self, query: str) -> str:
         res = []
-        devices = Device.query.filter(or_(Device.title.contains(query),Device.description.contains(query),Device.capability.contains(query))).all()
+        devices = YaHomeDevice.query.filter(or_(YaHomeDevice.title.contains(query),YaHomeDevice.description.contains(query),YaHomeDevice.capability.contains(query))).all()
         for device in devices:
             res.append({"url":f'YandexHome?op=edit&device={device.id}', "title":f'{device.title} ({device.description})', "tags":[{"name":"YandexHome","color":"primary"},{"name":"Device","color":"danger"}]})
         return res
@@ -179,8 +179,9 @@ class YandexHome(BasePlugin):
                             parameters['split'] = trait['split']
                     if 'modes' in parameters:
                         parameters["modes"] = trait['modes']
-                    if 'scenes' in parameters:
-                        parameters["scenes"] = trait['scenes']
+                    if 'color_scene' in parameters:
+                        parameters["color_scene"] = {}
+                        parameters["color_scene"]["scenes"] = trait['scenes']
                 else:
                     parameters['instance'] = instance_name
 
@@ -222,7 +223,7 @@ class YandexHome(BasePlugin):
 
         find = False
         with session_scope() as session:
-            devices = session.query(Device).filter(Device.capability.contains(obj),Device.capability.contains(prop)).all()
+            devices = session.query(YaHomeDevice).filter(YaHomeDevice.capability.contains(obj),YaHomeDevice.capability.contains(prop)).all()
             for device in devices:
                 dev = []
                 caps = json.loads(device.capability)
@@ -246,6 +247,8 @@ class YandexHome(BasePlugin):
                             state['instance'] = instance
                         else:
                             state['instance'] = cap['type']
+                            if cap['type'] == "color_scene":
+                                state['instance'] = "scene"
 
                         if cap['type'] in ['on', 'mute', 'pause', 'backlight', 'keep_warm', 'ionization', 'oscillation', 'controls_locked']:
                             state['value'] = bool(value)
@@ -345,15 +348,15 @@ class YandexHome(BasePlugin):
         @handle_admin_required
         def point_device(device_id=None):
             if request.method == "GET":
-                dev = Device.get_by_id(device_id)
+                dev = YaHomeDevice.get_by_id(device_id)
                 return jsonify(row2dict(dev))
             if request.method == "POST":
                 data = request.get_json()
                 with session_scope() as session:
                     if data['id']:
-                        device = session.query(Device).where(Device.id == int(data['id'])).one()
+                        device = session.query(YaHomeDevice).where(YaHomeDevice.id == int(data['id'])).one()
                     else:
-                        device = Device()
+                        device = YaHomeDevice()
                         session.add(device)
                         session.commit()
 
@@ -489,7 +492,7 @@ class YandexHome(BasePlugin):
                 request_id = request.headers.get('X-Request-Id')
                 self.logger.debug(f"devices request #{request_id}")
                 devices = []
-                devs = Device.query.all()
+                devs = YaHomeDevice.query.all()
                 for dev in devs:
                     device = json.loads(dev.config)
                     devices.append(device)
@@ -516,7 +519,7 @@ class YandexHome(BasePlugin):
                 for device in devices_request:
                     new_device = {'id': device['id'], 'capabilities': [], 'properties': []}
                     # Load device config
-                    dev = Device.get_by_id(device['id'])
+                    dev = YaHomeDevice.get_by_id(device['id'])
                     if dev is None:
                         self.delete_device(device['id'])
                         return jsonify(result)
@@ -551,7 +554,7 @@ class YandexHome(BasePlugin):
                             value = int(value)
                         elif "_event" in instance:
                             value = str(value)
-
+                        
                         if capability['type'] in devices_instance:
                             if devices_instance[capability['type']]['capability'] in ['float', 'event']:
                                 instance = instance.replace('_sensor', '')
@@ -564,6 +567,9 @@ class YandexHome(BasePlugin):
                                     }
                                 })
                             else:
+                                if instance == "color_scene":
+                                    instance = "scene"
+
                                 new_device['capabilities'].append({
                                     'type': PREFIX_CAPABILITIES + devices_instance[capability['type']]['capability'],
                                     'state': {
@@ -597,7 +603,7 @@ class YandexHome(BasePlugin):
                 # For each requested device...
                 for device in devices_request:
                     # Check that user can access this device
-                    dev = Device.get_by_id(device["id"])
+                    dev = YaHomeDevice.get_by_id(device["id"])
                     if not dev:
                         return "Access denied", 403
                     new_device = {'id': device['id'], 'capabilities': []}
@@ -611,7 +617,11 @@ class YandexHome(BasePlugin):
                         relative = state.get("relative", False)
                         try:
                             capabilities = json.loads(dev.capability)
-                            cap = capabilities[instance]
+                            if instance == "scene":
+                                cap = capabilities['color_scene']
+                            else:
+                                cap = capabilities[instance]
+                            
                             linked_object = cap['linked_object']
                             linked_property = cap['linked_property']
 

@@ -1,6 +1,6 @@
 from app.database import Column, Model, SurrogatePK, db
 
-class Device(SurrogatePK, db.Model):
+class YaHomeDevice(SurrogatePK, db.Model):
     __tablename__ = 'yandexhome_devices'
     title = Column(db.String(50))
     type = Column(db.String(50))

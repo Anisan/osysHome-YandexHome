@@ -122,13 +122,13 @@
                         <i class="fas fa-trash"></i>
                     </a>
                 </div>
-                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'scenes' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'color_scene' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
                     <div class="dropdown">
                         <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
                           Add scene
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                          <li v-for="scene in devices_instance[item.type].parameters.scenes">
+                          <li v-for="scene in devices_instance[item.type].parameters.color_scene.scenes">
                             <a class="dropdown-item ms-3" href="#" @click="addScene(key,scene)">[[ scene.id ]]</a>
                           </li>
                         </ul>
@@ -266,8 +266,8 @@
                     }
                     if ('modes' in this.devices_instance[item.instance_name]['parameters'])
                         cap['modes'] = this.devices_instance[item.instance_name]['parameters']['modes']
-                    if ('scenes' in this.devices_instance[item.instance_name]['parameters'])
-                        cap['scenes'] = this.devices_instance[item.instance_name]['parameters']['scenes']
+                    if ('color_scene' in this.devices_instance[item.instance_name]['parameters'])
+                        cap['scenes'] = this.devices_instance[item.instance_name]['parameters']['color_scene']['scenes']
                 }
                 this.$set(this.device.capability, item.instance_name, cap);
                 console.log(this.device)
