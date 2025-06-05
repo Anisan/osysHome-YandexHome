@@ -1,6 +1,6 @@
 {% extends "layouts/module_admin.html" %}
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="YandexHome">Yandex Home</a></li>
+<li class="breadcrumb-item"><a href="YandexHome">{{ _('Yandex Home')}}</a></li>
 {% endblock %}
 {% block module %}
 
@@ -10,15 +10,15 @@
 <div id="edit_device">
     <form @submit.prevent="updateDevice">
         <div class="input-group my-3">
-            <span class="input-group-text" id="inputGroup-sizing-sm">Name</span>
+            <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Name')}}</span>
             <input type="text" class="form-control" id="name" v-model="device.title">
         </div>
         <div class="input-group mb-3">
-            <span class="input-group-text" id="inputGroup-sizing-sm">Description</span>
+            <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Description')}}</span>
             <input type="text" class="form-control" id="name" v-model="device.description">
         </div>
         <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">Type</span>
+                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Type')}}</span>
                 <span class="input-group-text" id="inputGroup-sizing-sm">
                     <img :src="'/YandexHome/static/devices/'+ device.type +'.png'" height="30px" :alt="device.type" onError="this.src='/YandexHome/static/YandexHome.png'"/>
                 </span>
@@ -29,41 +29,41 @@
                 </select>
         </div>
         <div class="input-group mb-3">
-            <span class="input-group-text" id="inputGroup-sizing-sm">Room</span>
+            <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Room')}}</span>
             <input type="text" class="form-control" id="name" v-model="device.room">
         </div>
         <button class="btn btn-primary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
-            Advanced
+            {{ _('Advanced')}}
          </button>
         <div class="collapse" id="collapseExample">
           <div class="card card-body">
             <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">Manufacturer</span>
+                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Manufacturer')}}</span>
                 <input type="text" class="form-control" id="name" v-model="device.manufacturer">
             </div>
             <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">Model</span>
+                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Model')}}</span>
                 <input type="text" class="form-control" id="name" v-model="device.model">
             </div>
             <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">SW version</span>
+                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('SW version')}}</span>
                 <input type="text" class="form-control" id="name" v-model="device.sw_version">
             </div>
             <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">HW version</span>
+                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('HW version')}}</span>
                 <input type="text" class="form-control" id="name" v-model="device.hw_version">
             </div>
           </div>
         </div>
         <div class="dropdown mt-3">
             <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-              Add capability
+                {{ _('Add capability')}}
             </a>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
               <li v-for="(item, key) in devices_instance">
-                <h6 v-if="key=='controls_locked'" class="dropdown-header">Actions</h6>
-                <h6 v-if="key=='amperage_sensor'" class="dropdown-header">Sensors number</h6>
-                <h6 v-if="key=='vibration_event'" class="dropdown-header">Sensors event</h6>
+                <h6 v-if="key=='controls_locked'" class="dropdown-header">{{ _('Actions')}}</h6>
+                <h6 v-if="key=='amperage_sensor'" class="dropdown-header">{{ _('Sensors number')}}</h6>
+                <h6 v-if="key=='vibration_event'" class="dropdown-header">{{ _('Sensors event')}}</h6>
                 <a :class="'dropdown-item ms-3' + (key in device.capability ? ' disabled' :'')" href="#" @click="addCapability(item)">[[ item.description ]]</a>
               </li>
             </ul>
@@ -73,43 +73,43 @@
                 [[ item.description ]]
                 <div class="d-flex align-items-start">
                     <div>
-                        <select-with-filter placeholder="Select object" :options="objectOptions" v-model="item.linked_object" @changed="item.linked_property = null" style="min-width: 300px;max-width: 300px;"></select-with-filter>
+                        <select-with-filter placeholder="{{ _('Select object')}}" :options="objectOptions" v-model="item.linked_object" @changed="item.linked_property = null" style="min-width: 300px;max-width: 300px;"></select-with-filter>
                     </div>
                     <div>
-                        <select-with-filter placeholder="Select property" v-if="item.linked_object && item.linked_object in objects" :options="objects[item.linked_object].properties" v-model="item.linked_property"  style="min-width: 300px;max-width: 300px;"></select-with-filter>
+                        <select-with-filter placeholder="{{ _('Select property')}}" v-if="item.linked_object && item.linked_object in objects" :options="objects[item.linked_object].properties" v-model="item.linked_property"  style="min-width: 300px;max-width: 300px;"></select-with-filter>
                     </div>
                     <div class="form-check mt-2 mx-2">
                         <input class="form-check-input" type="checkbox" v-model="item.reportable" id="flexCheckDefault">
                         <label class="form-check-label" for="flexCheckDefault">
-                            Reportable
+                            {{ _('Reportable')}}
                         </label>
                     </div>
                     <div v-if="item.type in devices_instance && devices_instance[item.type].capability ==='on_off'" class="form-check mt-2 mx-2">
                         <input class="form-check-input" type="checkbox" v-model="item.split" id="flexCheckDefault">
                         <label class="form-check-label" for="flexCheckDefault">
-                            Split
+                            {{ _('Split')}}
                         </label>
                     </div>
                     <a class="btn btn-danger ms-2 ms-auto" @click="delCapability(key)"><i class="fas fa-trash"></i></a>
                 </div>
                 <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'range' in devices_instance[item.type].parameters" class="d-inline-flex mb-2">
                     <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text" id="inputGroup-sizing-sm">Min</span>
+                        <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Min')}}</span>
                         <input type="number" class="form-control" aria-label="Min" v-model="item.min">
                     </div>
                     <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text" id="inputGroup-sizing-sm">Max</span>
+                        <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Max')}}</span>
                         <input type="number" class="form-control" aria-label="Max" v-model="item.max">
                     </div>
                     <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text" id="inputGroup-sizing-sm">Precision</span>
+                        <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Precision')}}</span>
                         <input type="number" class="form-control" step="0.1" aria-label="Precision" v-model="item.precision">
                     </div>
                 </div>
                 <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'modes' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
                     <div class="dropdown">
                         <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                          Add mode
+                            {{ _('Add mode')}}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
                           <li v-for="mode in devices_instance[item.type].parameters.modes">
@@ -125,7 +125,7 @@
                 <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'color_scene' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
                     <div class="dropdown">
                         <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                          Add scene
+                            {{ _('Add scene')}}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
                           <li v-for="scene in devices_instance[item.type].parameters.color_scene.scenes">
@@ -143,9 +143,9 @@
         <div class="my-2 mt-3">
             <button class="btn btn-success" type="submit" :disabled="isSaving">
                 <span v-if="isSaving" class="fas fa-rotate me-2" role="status" aria-hidden="true"></span>
-                Save
+                {{ _('Save')}}
             </button>
-            <a href="YandexHome" class="btn btn-secondary">Cancel</a>
+            <a href="YandexHome" class="btn btn-secondary">{{ _('Cancel')}}</a>
         </div>
     </form>
     <p>[[ message ]]</p>

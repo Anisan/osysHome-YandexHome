@@ -1,31 +1,48 @@
 {% extends "layouts/module_admin.html" %}
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="YandexHome">Yandex Home</a></li>
+<li class="breadcrumb-item"><a href="YandexHome">{{ _('Yandex Home')}}</a></li>
 {% endblock %}
 {% block module %}
 <a href="https://dialogs.yandex.ru/developer"><img src="/YandexHome/static/YandexHome.png" height="30px"></img></a>
 <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
-    Settings
+    <i class="fas fa-cog me-2"></i>{{ _('Settings')}}
 </button>
-<a href="?op=add" class="btn btn-primary" title="Add">Add device</a>
+<a href="?op=add" class="btn btn-primary" title="Add"><i class="fas fa-plus me-2"></i>{{ _('Add device')}}</a>
+<style>
+      .cursor-pointer {
+        cursor: pointer;
+      }
+      .group-header {
+        transition: background-color 0.2s ease;
+      }
+      .group-header:hover {
+        background-color: var(--bs-tertiary-bg) !important;
+      }
+      [data-bs-theme="dark"] .group-header {
+        border: 1px solid var(--bs-border-color);
+      }
+</style>
 <div class="table-responsive">
     <table class="table table-hover table-sm">
         <thead>
             <tr>
-                <th>Title</th>
-                <th>Description</th>
-                <th>Type</th>
-                <th>Link</th>
+                <th>{{ _('Title')}}</th>
+                <th>{{ _('Description')}}</th>
+                <th>{{ _('Type')}}</th>
+                <th>{{ _('Links')}}</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
             {% for key, value in devices.items() %}
-            <tr class="table-secondary"><td colspan="6">
-                <b>{{key}}</bb>
-            </td></tr>
+            <tr class="group-header-row">
+                <th class="group-header p-2 rounded cursor-pointer bg-body-secondary" colspan="5" data-toggle="collapse" data-target=".group-{{ key }}">
+                    <b>{{key}}</b>
+                    <i class="fas fa-chevron-down float-end mt-1 me-1"></i>
+                </th>
+            </tr>
             {% for device in value %}
-            <tr>
+            <tr class="collapse show group-{{ key }}">
                 <td class="py-1">
                     <img src="/YandexHome/static/devices/{{ device.type }}.png" height="50px" onError="this.src='/YandexHome/static/YandexHome.png'">
                     {{ device.title }}
@@ -41,11 +58,11 @@
                 </td>
                 <td class="py-1" width="1%" nowrap>
                     <div>
-                        <a href="?op=edit&device={{device.id}}" class="btn btn-secondary" title="Edit"><i
+                        <a href="?op=edit&device={{device.id}}" class="btn btn-secondary" title="{{ _('Edit')}}"><i
                                 class="feather icon-edit"></i></a>
                         <a href="?op=delete&device={{device.id}}"
                             onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-danger"
-                            title="Delete"><i class="feather icon-trash"></i></a>
+                            title="{{ _('Delete')}}"><i class="feather icon-trash"></i></a>
                     </div>
                 </td>
             </tr>
@@ -62,7 +79,7 @@
             <form method="POST">
                 <!-- Поля формы -->
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Settings</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">{{ _('Settings')}}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -114,8 +131,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close')}}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('Submit')}}</button>
                 </div>
             </form>
         </div>
@@ -156,5 +173,20 @@ function genKey2() {
   if (element) 
     element.value = `${part1}-${part2}-${part3}-${part4}-${part5}`;
 }
+
+$(document).ready(function() {
+    // Обработка клика по заголовку группы
+    $('.group-header').click(function() {
+        // Находим иконку внутри этого заголовка
+        var icon = $(this).find('i');
+        // Переключаем классы иконки (стрелка вверх/вниз)
+        icon.toggleClass('fa-chevron-down fa-chevron-right');
+        
+        // Получаем target для collapse
+        var target = $(this).data('target');
+        // Переключаем видимость связанных строк
+        $(target).collapse('toggle');
+    });
+});
 </script>
 {% endblock %}

@@ -380,9 +380,24 @@ class YandexHome(BasePlugin):
         @self.blueprint.route('/YandexHome/types', methods=['GET'])
         @handle_admin_required
         def get_types():
+            from app import safe_translate as _
+
+            _devices_types = {key: _(value) for key, value in devices_types.items()}
+
+            translated = {}
+            for key, value in devices_instance.items():
+                translated_value = value.copy()
+                translated_value['description'] = _(value['description'])
+                if 'parameters' in value and 'modes' in value['parameters']:
+                    translated_value['parameters']['modes'] = [
+                        {'value': mode['value'], 'name': _(mode.get('name', mode['value']))}
+                        for mode in value['parameters']['modes']
+                    ]
+                translated[key] = translated_value
+
             types = {}
-            types['devices_types'] = devices_types
-            types['devices_instance'] = devices_instance
+            types['devices_types'] = _devices_types
+            types['devices_instance'] = translated
             return self.make_unsorted_response(types, 200)
 
         # OAuth entry point

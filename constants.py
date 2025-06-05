@@ -1,62 +1,64 @@
+from app import safe_translate as _
+
 devices_types = {
-    "camera": "Видеокамера, видео-домофон, дверной глазок с камерой",
-    "cooking": "Холодильник, духовой шкаф",
-    "cooking.coffee_maker": "Кофеварка, кофемашина",
-    "cooking.kettle": "Умный чайник, термопот",
-    "cooking.multicooker": "Мультиварка",
-    "dishwasher": "Посудомоечная машина",
-    "humidifier": "Увлажнитель воздуха",
-    "iron": "Утюг, парогенератор",
-    "light": "Лампочка, светильник, ночник",
-    "light.ceiling": "Люстра",
-    "light.strip": "Диодная лента",
-    "media_device": "DVD-плеер и другие медиаустройства",
-    "media_device.receiver": "Спутниковый ресивер, ИК-пульт от ресивера, AV-ресивер",
-    "media_device.tv": "Умный телевизор, ИК-пульт от телевизора, медиаприставка, ресивер",
-    "media_device.tv_box": "Умная ТВ-приставка, ИК-пульт от ТВ-приставки",
-    "openable": "Дверь, ворота, окно, ставни",
-    "openable.curtain": "Шторы, жалюзи",
-    "openable.valve": "Шаровой кран",
-    "other": "Остальные устройства",
-    "pet_drinking_fountain": "Поилка",
-    "pet_feeder": "Кормушка",
-    "purifier": "Очиститель воздуха, мойка воздуха",
-    "sensor": "Датчик движения, датчик влажности и другие датчики",
-    "sensor.button": "Умная кнопка",
-    "sensor.climate": "Датчик климата",
-    "sensor.gas": "Датчик газа",
-    "sensor.illumination": "Датчик освещенности",
-    "sensor.motion": "Датчик движения",
-    "sensor.open": "Датчик открытия двери",
-    "sensor.smoke": "Датчик дыма",
-    "sensor.vibration": "Датчик вибрации",
-    "sensor.water_leak": "Датчик протечки воды",
-    "smart_meter": "Счетчик",
-    "smart_meter.cold_water": "Счетчик холодной воды",
-    "smart_meter.electricity": "Счетчик электроэнергии",
-    "smart_meter.gas": "Счетчик газа",
-    "smart_meter.heat": "Счетчик тепла",
-    "smart_meter.hot_water": "Счетчик горячей воды",
-    "socket": "Умная розетка",
-    "switch": "Выключатель",
-    "thermostat": "Водонагреватель, теплый пол, обогреватель, электровентилятор",
-    "thermostat.ac": "Кондиционер",
-    "vacuum_cleaner": "Робот-пылесос",
-    "ventilation": "Бризер, вытяжка, система приточной вентиляции",
-    "ventilation.fan": "Вентилятор",
-    "washing_machine": "Стиральная машина.",
+    "camera": _("Video camera, video intercom, door peephole with camera"),
+    "cooking": _("Refrigerator, oven"),
+    "cooking.coffee_maker": _("Coffee maker, coffee machine"),
+    "cooking.kettle": _("Smart kettle, thermal pot"),
+    "cooking.multicooker": _("Multicooker"),
+    "dishwasher": _("Dishwasher"),
+    "humidifier": _("Air humidifier"),
+    "iron": _("Iron, steam generator"),
+    "light": _("Light bulb, lamp, night light"),
+    "light.ceiling": _("Chandelier"),
+    "light.strip": _("LED strip"),
+    "media_device": _("DVD player and other media devices"),
+    "media_device.receiver": _("Satellite receiver, IR remote for receiver, AV receiver"),
+    "media_device.tv": _("Smart TV, IR remote for TV, media set-top box, receiver"),
+    "media_device.tv_box": _("Smart TV box, IR remote for TV box"),
+    "openable": _("Door, gate, window, shutters"),
+    "openable.curtain": _("Curtains, blinds"),
+    "openable.valve": _("Ball valve"),
+    "other": _("Other devices"),
+    "pet_drinking_fountain": _("Pet water fountain"),
+    "pet_feeder": _("Pet feeder"),
+    "purifier": _("Air purifier, air washer"),
+    "sensor": _("Motion sensor, humidity sensor and other sensors"),
+    "sensor.button": _("Smart button"),
+    "sensor.climate": _("Climate sensor"),
+    "sensor.gas": _("Gas sensor"),
+    "sensor.illumination": _("Light sensor"),
+    "sensor.motion": _("Motion sensor"),
+    "sensor.open": _("Door sensor"),
+    "sensor.smoke": _("Smoke sensor"),
+    "sensor.vibration": _("Vibration sensor"),
+    "sensor.water_leak": _("Water leak sensor"),
+    "smart_meter": _("Meter"),
+    "smart_meter.cold_water": _("Cold water meter"),
+    "smart_meter.electricity": _("Electricity meter"),
+    "smart_meter.gas": _("Gas meter"),
+    "smart_meter.heat": _("Heat meter"),
+    "smart_meter.hot_water": _("Hot water meter"),
+    "socket": _("Smart socket"),
+    "switch": _("Switch"),
+    "thermostat": _("Water heater, underfloor heating, heater, electric fan"),
+    "thermostat.ac": _("Air conditioner"),
+    "vacuum_cleaner": _("Robot vacuum"),
+    "ventilation": _("Breezer, hood, supply ventilation system"),
+    "ventilation.fan": _("Fan"),
+    "washing_machine": _("Washing machine"),
 }
 
 devices_instance = {
     "controls_locked": {
         "instance_name": "controls_locked",
-        "description": "Блокировка управления",
+        "description": _("Control lock"),
         "capability": "toggle",
         "default_value": False,
     },
     "on": {
         "instance_name": "on",
-        "description": "Включить/выключить",
+        "description": _("Turn on/off"),
         "capability": "on_off",
         "default_value": 0,
         "parameters": {
@@ -65,7 +67,7 @@ devices_instance = {
     },
     "humidity": {
         "instance_name": "humidity",
-        "description": "Влажность",
+        "description": _("Humidity"),
         "capability": "range",
         "default_value": 0,
         "parameters": {
@@ -75,14 +77,14 @@ devices_instance = {
     },
     "volume": {
         "instance_name": "volume",
-        "description": "Громкость",
+        "description": _("Volume"),
         "capability": "range",
         "default_value": 1,
         "parameters": {"range": {"min": 1, "max": 100, "precision": 1}},
     },
     "input_source": {
         "instance_name": "input_source",
-        "description": "Источник сигнала",
+        "description": _("Signal source"),
         "capability": "mode",
         "default_value": "one",
         "parameters": {
@@ -103,7 +105,7 @@ devices_instance = {
     },
     "program": {
         "instance_name": "program",
-        "description": "Программы работы",
+        "description": _("Operation programs"),
         "capability": "mode",
         "default_value": "one",
         "parameters": {
@@ -126,43 +128,43 @@ devices_instance = {
     },
     "pause": {
         "instance_name": "pause",
-        "description": "Пауза",
+        "description": _("Pause"),
         "capability": "toggle",
         "default_value": False,
     },
     "backlight": {
         "instance_name": "backlight",
-        "description": "Подсветка",
+        "description": _("Backlight"),
         "capability": "toggle",
         "default_value": False,
     },
     "mute": {
         "instance_name": "mute",
-        "description": "Режим без звука",
+        "description": _("Mute mode"),
         "capability": "toggle",
         "default_value": False,
     },
     "oscillation": {
         "instance_name": "oscillation",
-        "description": "Режим вращения",
+        "description": _("Rotation mode"),
         "capability": "toggle",
         "default_value": False,
     },
     "ionization": {
         "instance_name": "ionization",
-        "description": "Режим ионизации",
+        "description": _("Ionization mode"),
         "capability": "toggle",
         "default_value": False,
     },
     "keep_warm": {
         "instance_name": "keep_warm",
-        "description": "Режим поддержания тепла",
+        "description": _("Keep warm mode"),
         "capability": "toggle",
         "default_value": False,
     },
     "fan_speed": {
         "instance_name": "fan_speed",
-        "description": "Скорость вентиляции",
+        "description": _("Ventilation speed"),
         "capability": "mode",
         "parameters": {
             "modes": [
@@ -176,7 +178,7 @@ devices_instance = {
     },
     "open": {
         "instance_name": "open",
-        "description": "Степень открытия",
+        "description": _("Opening degree"),
         "capability": "range",
         "default_value": 0,
         "parameters": {
@@ -186,14 +188,14 @@ devices_instance = {
     },
     "channel": {
         "instance_name": "channel",
-        "description": "ТВ-канал",
+        "description": _("TV channel"),
         "capability": "range",
         "default_value": 1,
         "parameters": {"range": {"min": 0, "max": 999, "precision": 1}},
     },
     "temperature": {
         "instance_name": "temperature",
-        "description": "Температура",
+        "description": _("Temperature"),
         "capability": "range",
         "default_value": 20,
         "parameters": {
@@ -203,7 +205,7 @@ devices_instance = {
     },
     "cleanup_mode": {
         "instance_name": "cleanup_mode",
-        "description": "Режим уборки",
+        "description": _("Cleaning mode"),
         "capability": "mode",
         "parameters": {
             "modes": [
@@ -221,7 +223,7 @@ devices_instance = {
     },
     "thermostat": {
         "instance_name": "thermostat",
-        "description": "Температурный режим",
+        "description": _("Temperature mode"),
         "capability": "mode",
         "parameters": {
             "modes": [
@@ -238,7 +240,7 @@ devices_instance = {
     },
     "work_speed": {
         "instance_name": "work_speed",
-        "description": "Скорость работы",
+        "description": _("Operation speed"),
         "capability": "mode",
         "parameters": {
             "modes": [
@@ -255,21 +257,21 @@ devices_instance = {
     },
     "temperature_k": {
         "instance_name": "temperature_k",
-        "description": "Цветовая температура",
+        "description": _("Color temperature"),
         "capability": "color_setting",
         "default_value": 4500,
         "parameters": {"temperature_k": {"min": 2700, "max": 9000, "precision": 1}},
     },
     "rgb": {
         "instance_name": "rgb",
-        "description": "Цвет в формате RGB",
+        "description": _("Color in RGB format"),
         "capability": "color_setting",
         "default_value": "000000",
         "parameters": {"color_model": "rgb"},
     },
     "brightness": {
         "instance_name": "brightness",
-        "description": "Яркость",
+        "description": _("Brightness"),
         "capability": "range",
         "default_value": 50,
         "parameters": {
@@ -277,167 +279,169 @@ devices_instance = {
             "range": {"min": 1, "max": 100, "precision": 1},
         },
     },
-    "color_scene":
-    {
+    "color_scene": {
         "instance_name": "color_scene",
-        "description": "Режим работы светящихся элементов",
+        "description": _("Operation mode of lighting elements"),
         "capability": "color_setting",
         "default_value": 4500,
-        "parameters": { "color_scene":{
-            "scenes": [
-                {"id": "alarm"},
-                {"id": "alice"},
-                {"id": "candle"},
-                {"id": "dinner"},
-                {"id": "fantasy"},
-                {"id": "garland"},
-                {"id": "jungle"},
-                {"id": "movie"},
-                {"id": "night"},
-                {"id": "neon"},
-                {"id": "ocean"},
-                {"id": "party"},
-                {"id": "rest"},
-                {"id": "romance"},
-                {"id": "siren"},
-            ]}},
+        "parameters": {
+            "color_scene": {
+                "scenes": [
+                    {"id": "alarm"},
+                    {"id": "alice"},
+                    {"id": "candle"},
+                    {"id": "dinner"},
+                    {"id": "fantasy"},
+                    {"id": "garland"},
+                    {"id": "jungle"},
+                    {"id": "movie"},
+                    {"id": "night"},
+                    {"id": "neon"},
+                    {"id": "ocean"},
+                    {"id": "party"},
+                    {"id": "rest"},
+                    {"id": "romance"},
+                    {"id": "siren"},
+                ]
+            }
+        },
     },
     # float sensors
     "amperage_sensor": {
         "instance_name": "amperage_sensor",
-        "description": "Сила тока",
+        "description": _("Current"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.ampere"},
     },
     "battery_level_sensor": {
         "instance_name": "battery_level_sensor",
-        "description": "Уровень заряда",
+        "description": _("Battery level"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.percent"},
     },
     "co2_level_sensor": {
         "instance_name": "co2_level_sensor",
-        "description": "Углекислый газ",
+        "description": _("Carbon dioxide"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.ppm"},
     },
     "humidity_sensor": {
         "instance_name": "humidity_sensor",
-        "description": "Влажность",
+        "description": _("Humidity"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.percent"},
     },
     "illumination_sensor": {
         "instance_name": "illumination_sensor",
-        "description": "Освещенность",
+        "description": _("Illumination"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.illumination.lux"},
     },
     "pm1_density_sensor": {
         "instance_name": "pm1_density_sensor",
-        "description": "Загрязнение воздуха частицами PM1",
+        "description": _("Air pollution with PM1 particles"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.density.mcg_m3"},
     },
     "pm2.5_density_sensor": {
         "instance_name": "pm2.5_density_sensor",
-        "description": "Загрязнение воздуха частицами PM2.5",
+        "description": _("Air pollution with PM2.5 particles"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.density.mcg_m3"},
     },
     "pm10_density_sensor": {
         "instance_name": "pm10_density_sensor",
-        "description": "Загрязнение воздуха частицами PM10",
+        "description": _("Air pollution with PM10 particles"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.density.mcg_m3"},
     },
     "power_sensor": {
         "instance_name": "power_sensor",
-        "description": "Мощность",
+        "description": _("Power"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.watt"},
     },
     "food_level": {
         "instance_name": "food_level",
-        "description": "Отображение показаний уровня корма",
+        "description": _("Display of feed level readings"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.percent "},
     },
     "meter_sensor": {
         "instance_name": "meter_sensor",
-        "description": "Показания универсального счетчика",
+        "description": _("Universal meter readings"),
         "capability": "float",
         "default_value": 0,
     },
     "electricity_meter_sensor": {
         "instance_name": "electricity_meter_sensor",
-        "description": "Показания электроэнергии",
+        "description": _("Electricity readings"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.kilowatt_hour"},
     },
     "water_meter_sensor": {
         "instance_name": "water_meter_sensor",
-        "description": "Показания воды",
+        "description": _("Water readings"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.cubic_meter"},
     },
     "gas_meter_sensor": {
         "instance_name": "gas_meter_sensor",
-        "description": "Показания газа",
+        "description": _("Gas readings"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.cubic_meter"},
     },
     "heat_meter_sensor": {
         "instance_name": "heat_meter_sensor",
-        "description": "Показания тепла",
+        "description": _("Heat readings"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.gigacalorie"},
     },
     "pressure_sensor": {
         "instance_name": "pressure_sensor",
-        "description": "Давление мм. рт. ст.",
+        "description": _("Pressure mmHg"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.pressure.mmhg"},
     },
     "temperature_sensor": {
         "instance_name": "temperature_sensor",
-        "description": "Температура",
+        "description": _("Temperature"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.temperature.celsius"},
     },
     "tvoc_sensor": {
         "instance_name": "tvoc_sensor",
-        "description": "Загрязнение воздуха органическими веществами",
+        "description": _("Air pollution with organic substances"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.density.mcg_m3"},
     },
     "voltage_sensor": {
         "instance_name": "voltage_sensor",
-        "description": "Напряжение",
+        "description": _("Voltage"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.volt"},
     },
     "water_level_sensor": {
         "instance_name": "water_level_sensor",
-        "description": "Уровень воды",
+        "description": _("Water level"),
         "capability": "float",
         "default_value": 0,
         "parameters": {"unit": "unit.percent"},
@@ -445,7 +449,7 @@ devices_instance = {
     # event sensors
     "vibration_event": {
         "instance_name": "vibration_event",
-        "description": "Датчик вибрации/падения/переворачивания",
+        "description": _("Vibration/fall/tilt sensor"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -457,7 +461,7 @@ devices_instance = {
     },
     "open_event": {
         "instance_name": "open_event",
-        "description": "Датчик открытия/закрытия",
+        "description": _("Open/close sensor"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -469,7 +473,7 @@ devices_instance = {
     },
     "button_event": {
         "instance_name": "button_event",
-        "description": "Событие нажатия кнопки",
+        "description": _("Button press event"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -482,7 +486,7 @@ devices_instance = {
     },
     "motion_event": {
         "instance_name": "motion_event",
-        "description": "Датчик движения",
+        "description": _("Motion sensor"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -494,7 +498,7 @@ devices_instance = {
     },
     "smoke_event": {
         "instance_name": "smoke_event",
-        "description": "Датчик дыма",
+        "description": _("Smoke sensor"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -507,7 +511,7 @@ devices_instance = {
     },
     "gas_event": {
         "instance_name": "gas_event",
-        "description": "Датчик наличия газа в помещении",
+        "description": _("Gas presence sensor in the room"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -520,7 +524,7 @@ devices_instance = {
     },
     "battery_level_event": {
         "instance_name": "battery_level_event",
-        "description": "Заряда батареи",
+        "description": _("Battery charge"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -532,7 +536,7 @@ devices_instance = {
     },
     "food_level_event": {
         "instance_name": "food_level_event",
-        "description": "Уровень корма",
+        "description": _("Feed level"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -545,7 +549,7 @@ devices_instance = {
     },
     "water_level_event": {
         "instance_name": "water_level_event",
-        "description": "Уровень воды",
+        "description": _("Water level"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
@@ -558,7 +562,7 @@ devices_instance = {
     },
     "water_leak_event": {
         "instance_name": "water_leak_event",
-        "description": "Датчик протечки",
+        "description": _("Leak sensor"),
         "capability": "event",
         "default_value": 0,
         "parameters": {
