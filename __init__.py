@@ -563,8 +563,10 @@ class YandexHome(BasePlugin):
                             value = int(value, 16)
                         elif instance == 'open_event':
                             value = 'closed' if value == 1 else 'opened'
-                        elif instance in ['temperature','temperature_k']:
+                        elif instance in ['temperature']:
                             value = float(value)
+                        elif instance in ['temperature_k']:
+                            value = int(value)
                         elif instance in ['open','volume','channel','humidity','brightness']:
                             value = int(value)
                         elif "_event" in instance:

@@ -1,5 +1,6 @@
 {
   "Add capability": "Add capability",
+  "Add device": "Add device",
   "Add mode": "Add mode",
   "Add scene": "Add scene",
   "Advanced": "Advanced",
@@ -55,7 +56,6 @@
   "Light bulb, lamp, night light": "Light bulb, lamp, night light",
   "Light sensor": "Light sensor",
   "Links": "Links",
-  "Manufacturer": "Manufacturer",
   "Max": "Max",
   "Meter": "Meter",
   "Min": "Min",
