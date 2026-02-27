@@ -34,6 +34,7 @@ import urllib
 import traceback
 from sqlalchemy import or_
 from flask import request, render_template, jsonify, redirect, make_response
+from app.configuration import Config
 from app.core.main.BasePlugin import BasePlugin
 from app.core.lib.cache import findInCache, saveToCache
 from app.core.lib.object import getProperty, setProperty
@@ -304,7 +305,7 @@ class YandexHome(BasePlugin):
                             'Authorization': f"OAuth {client_key}"
                         }
 
-                        response = requests.post(url, headers=headers, json=send)
+                        response = requests.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
 
                         self.logger.debug(f"PropertySetHandle send result: {response.text}")  # Assuming WriteLog writes to the console or replace with appropriate logging function
 
@@ -328,7 +329,7 @@ class YandexHome(BasePlugin):
             'ts': int(time.time()),
             'payload': payload
         }
-        response = requests.post(url, headers=headers, json=send)
+        response = requests.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
         self.logger.info(f"Discovery send result: {response.text}")
 
     def delete_device(self, device_id):
@@ -339,7 +340,7 @@ class YandexHome(BasePlugin):
         headers = {
             'Authorization': f"Bearer {client_key}"
         }
-        response = requests.delete(url, headers=headers)
+        response = requests.delete(url, headers=headers, timeout=Config.HTTP_REQUEST_TIMEOUT)
         self.logger.info(f"Delete send result: {response.text}")
 
     def route_index(self):

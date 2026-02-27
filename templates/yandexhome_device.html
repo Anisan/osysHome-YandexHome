@@ -68,7 +68,7 @@
               </li>
             </ul>
         </div>
-        <div class="list-group" v-if="Object.keys(device.capability).length > 0">
+        <div class="list-group" v-if="device && Object.keys(device.capability).length > 0">
             <div class="list-group-item list-group-item-action" v-for="item,key in device.capability" :key="'cap_'+key">
                 [[ item.description ]]
                 <div class="d-flex align-items-start">
