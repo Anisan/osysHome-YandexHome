@@ -10,6 +10,7 @@ devices_types = {
     "humidifier": _("Air humidifier"),
     "iron": _("Iron, steam generator"),
     "light": _("Light bulb, lamp, night light"),
+    "light.lamp": _("Table lamp"),
     "light.ceiling": _("Chandelier"),
     "light.strip": _("LED strip"),
     "media_device": _("DVD player and other media devices"),
@@ -19,6 +20,7 @@ devices_types = {
     "openable": _("Door, gate, window, shutters"),
     "openable.curtain": _("Curtains, blinds"),
     "openable.valve": _("Ball valve"),
+    "openable.door_lock": _("Door lock"),
     "other": _("Other devices"),
     "pet_drinking_fountain": _("Pet water fountain"),
     "pet_feeder": _("Pet feeder"),
@@ -41,6 +43,7 @@ devices_types = {
     "smart_meter.hot_water": _("Hot water meter"),
     "socket": _("Smart socket"),
     "switch": _("Switch"),
+    "switch.relay": _("Circuit breaker, smart relay"),
     "thermostat": _("Water heater, underfloor heating, heater, electric fan"),
     "thermostat.ac": _("Air conditioner"),
     "vacuum_cleaner": _("Robot vacuum"),
@@ -221,6 +224,99 @@ devices_instance = {
             "ordered": True,
         },
     },
+    "coffee_mode": {
+        "instance_name": "coffee_mode",
+        "description": _("Coffee machine mode"),
+        "capability": "mode",
+        "parameters": {
+            "modes": [
+                {"value": "americano"},
+                {"value": "cappuccino"},
+                {"value": "double_espresso"},
+                {"value": "espresso"},
+                {"value": "latte"},
+            ],
+            "ordered": False,
+        },
+    },
+    "dishwashing": {
+        "instance_name": "dishwashing",
+        "description": _("Dishwashing mode"),
+        "capability": "mode",
+        "parameters": {
+            "modes": [
+                {"value": "auto"},
+                {"value": "eco"},
+                {"value": "express"},
+                {"value": "glass"},
+                {"value": "intensive"},
+                {"value": "pre_rinse"},
+                {"value": "quiet"},
+            ],
+            "ordered": False,
+        },
+    },
+    "heat": {
+        "instance_name": "heat",
+        "description": _("Heating mode"),
+        "capability": "mode",
+        "parameters": {
+            "modes": [
+                {"value": "auto"},
+                {"value": "max"},
+                {"value": "min"},
+                {"value": "normal"},
+                {"value": "turbo"},
+            ],
+            "ordered": True,
+        },
+    },
+    "swing": {
+        "instance_name": "swing",
+        "description": _("Air direction"),
+        "capability": "mode",
+        "parameters": {
+            "modes": [
+                {"value": "auto"},
+                {"value": "horizontal"},
+                {"value": "stationary"},
+                {"value": "vertical"},
+            ],
+            "ordered": False,
+        },
+    },
+    "tea_mode": {
+        "instance_name": "tea_mode",
+        "description": _("Tea making mode"),
+        "capability": "mode",
+        "parameters": {
+            "modes": [
+                {"value": "black_tea"},
+                {"value": "express"},
+                {"value": "flower_tea"},
+                {"value": "green_tea"},
+                {"value": "herbal_tea"},
+                {"value": "oolong_tea"},
+                {"value": "puerh_tea"},
+                {"value": "red_tea"},
+                {"value": "white_tea"},
+            ],
+            "ordered": False,
+        },
+    },
+    "ventilation_mode": {
+        "instance_name": "ventilation_mode",
+        "description": _("Ventilation mode"),
+        "capability": "mode",
+        "parameters": {
+            "modes": [
+                {"value": "auto"},
+                {"value": "supply_air"},
+                {"value": "extraction_air"},
+            ],
+            "ordered": False,
+        },
+    },
     "thermostat": {
         "instance_name": "thermostat",
         "description": _("Temperature mode"),
@@ -233,6 +329,7 @@ devices_instance = {
                 {"value": "eco"},
                 {"value": "dry"},
                 {"value": "fan_only"},
+                {"value": "preheat"},
                 {"value": "turbo"},
             ],
             "ordered": True,
@@ -269,6 +366,13 @@ devices_instance = {
         "default_value": "000000",
         "parameters": {"color_model": "rgb"},
     },
+    "hsv": {
+        "instance_name": "hsv",
+        "description": _("Color in HSV format"),
+        "capability": "color_setting",
+        "default_value": {"h": 0, "s": 100, "v": 50},
+        "parameters": {"color_model": "hsv"},
+    },
     "brightness": {
         "instance_name": "brightness",
         "description": _("Brightness"),
@@ -299,6 +403,7 @@ devices_instance = {
                     {"id": "neon"},
                     {"id": "ocean"},
                     {"id": "party"},
+                    {"id": "reading"},
                     {"id": "rest"},
                     {"id": "romance"},
                     {"id": "siren"},
@@ -375,7 +480,7 @@ devices_instance = {
         "description": _("Display of feed level readings"),
         "capability": "float",
         "default_value": 0,
-        "parameters": {"unit": "unit.percent "},
+        "parameters": {"unit": "unit.percent"},
     },
     "meter_sensor": {
         "instance_name": "meter_sensor",
@@ -456,6 +561,7 @@ devices_instance = {
             "events": [
                 {"value": "tilt"},
                 {"value": "fall"},
+                {"value": "vibration"},
             ]
         },
     },
@@ -529,7 +635,7 @@ devices_instance = {
         "default_value": 0,
         "parameters": {
             "events": [
-                {"value": "low "},
+                {"value": "low"},
                 {"value": "normal"},
             ]
         },

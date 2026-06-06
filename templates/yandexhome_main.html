@@ -2,88 +2,182 @@
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="YandexHome">{{ _('Yandex Home')}}</a></li>
 {% endblock %}
+{% block stylesheets %}
+{{ super() }}
+<link rel="stylesheet" href="/YandexHome/static/css/yandexhome.css">
+{% endblock %}
 {% block module %}
-<a href="https://dialogs.yandex.ru/developer"><img src="/YandexHome/static/YandexHome.png" height="30px"></img></a>
-<button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
-    <i class="fas fa-cog me-2"></i>{{ _('Settings')}}
-</button>
-<a href="?op=add" class="btn btn-primary" title="Add"><i class="fas fa-plus me-2"></i>{{ _('Add device')}}</a>
-<style>
-      .cursor-pointer {
-        cursor: pointer;
-      }
-      .group-header {
-        transition: background-color 0.2s ease;
-      }
-      .group-header:hover {
-        background-color: var(--bs-tertiary-bg) !important;
-      }
-      [data-bs-theme="dark"] .group-header {
-        border: 1px solid var(--bs-border-color);
-      }
-</style>
-<div class="table-responsive">
-    <table class="table table-hover table-sm">
+<div class="card border border-secondary border-opacity-25 shadow-sm mb-3 rounded-3 text-white bg-dark yh-module-header">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+            <a href="https://dialogs.yandex.ru/developer" target="_blank" rel="noopener" class="yh-module-icon-link" title="Yandex Dialogs">
+                <div class="flex-shrink-0 rounded-3 bg-white bg-opacity-10 p-2 border border-white border-opacity-25 d-flex align-items-center justify-content-center yh-module-icon-wrap">
+                    <img src="{{ url_for(segment ~ '.static', filename='YandexHome.png') }}" alt="Yandex Home" class="rounded-2 object-fit-contain yh-module-icon">
+                </div>
+            </a>
+            <div class="min-w-0 yh-module-intro-text">
+                <h1 class="h4 mb-1 fw-semibold text-white">{{ _('Yandex Home')}}</h1>
+                <p class="small mb-0 text-white-50">{{ _('Smart home devices and binding to osysHome objects')}}</p>
+            </div>
+        </div>
+        <div class="yh-toolbar-actions">
+            <a href="?op=add" class="btn btn-primary rounded-3" title="{{ _('Add device')}}">
+                <i class="fas fa-plus me-2"></i><span class="yh-btn-label">{{ _('Add device')}}</span>
+            </a>
+            <button type="button" class="btn btn-outline-light rounded-3 yh-btn-settings" data-bs-toggle="modal" data-bs-target="#exampleModal" title="{{ _('Settings')}}" aria-label="{{ _('Settings')}}">
+                <i class="fas fa-cog yh-btn-settings-icon"></i>
+                <span class="yh-btn-settings-label">{{ _('Settings')}}</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="yh-devices-table-wrap d-none d-lg-block table-responsive">
+    <table class="table table-hover table-sm yh-device-table">
+        <colgroup>
+            <col class="yh-col-title">
+            <col class="yh-col-desc">
+            <col class="yh-col-type">
+            <col class="yh-col-links">
+            <col class="yh-col-actions">
+        </colgroup>
         <thead>
             <tr>
                 <th>{{ _('Title')}}</th>
-                <th>{{ _('Description')}}</th>
-                <th>{{ _('Type')}}</th>
-                <th>{{ _('Links')}}</th>
-                <th></th>
+                <th class="yh-col-desc">{{ _('Description')}}</th>
+                <th class="yh-col-type">{{ _('Type')}}</th>
+                <th class="yh-col-links">{{ _('Links')}}</th>
+                <th class="yh-col-actions"></th>
             </tr>
         </thead>
         <tbody>
             {% for key, value in devices.items() %}
             <tr class="group-header-row">
-                <th class="group-header p-2 rounded cursor-pointer bg-body-secondary" colspan="5" data-toggle="collapse" data-target=".group-{{ key }}">
-                    <b>{{key}}</b>
-                    <i class="fas fa-chevron-down float-end mt-1 me-1"></i>
+                <th class="group-header p-2 rounded cursor-pointer bg-body-secondary" colspan="5" data-group-key="{{ key }}" data-yh-group-view="table">
+                    <span class="yh-group-header-inner">
+                        <span class="yh-group-title">
+                            <b>{{ key }}</b>
+                            <span class="badge bg-primary rounded-pill ms-2">{{ value|length }}</span>
+                        </span>
+                        <i class="fas fa-chevron-down yh-group-chevron"></i>
+                    </span>
                 </th>
             </tr>
-            {% for device in value %}
-            <tr class="collapse show group-{{ key }}">
-                <td class="py-1">
-                    <img src="/YandexHome/static/devices/{{ device.type }}.png" height="50px" onError="this.src='/YandexHome/static/YandexHome.png'">
-                    {{ device.title }}
-                </td>
-                <td class="py-1">{{ device.description }}</td>
-                <td class="py-1">{{ device.type }}</td>
-                <td class="py-1">
-                    {% for key,item in device.caps.items() %}
-                    <div>
-                    <b>{{key}}</b> ({{ item.linked_object }}.{{ item.linked_property }})
-                    </div>
-                    {% endfor %}
-                </td>
-                <td class="py-1" width="1%" nowrap>
-                    <div>
-                        <a href="?op=edit&device={{device.id}}" class="btn btn-secondary" title="{{ _('Edit')}}"><i
-                                class="feather icon-edit"></i></a>
-                        <a href="?op=delete&device={{device.id}}"
-                            onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-danger"
-                            title="{{ _('Delete')}}"><i class="feather icon-trash"></i></a>
+            <tr class="yh-group-collapse-row">
+                <td colspan="5" class="p-0 border-0">
+                    <div class="collapse show yh-group-rows" data-group-key="{{ key }}">
+                        <table class="table table-hover table-sm mb-0 yh-group-inner-table">
+                            <colgroup>
+                                <col class="yh-col-title">
+                                <col class="yh-col-desc">
+                                <col class="yh-col-type">
+                                <col class="yh-col-links">
+                                <col class="yh-col-actions">
+                            </colgroup>
+                            <tbody>
+                                {% for device in value %}
+                                <tr>
+                                    <td class="py-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img src="/YandexHome/static/devices/{{ device.type }}.png" class="yh-device-icon yh-device-icon-lg" alt="{{ device.type }}" onError="this.src='/YandexHome/static/YandexHome.png'">
+                                            <span>{{ device.title }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-1 yh-col-desc">{{ device.description }}</td>
+                                    <td class="py-1 yh-col-type"><code class="small">{{ device.type }}</code></td>
+                                    <td class="py-1 yh-col-links">
+                                        {% for cap_key, item in device.caps.items() %}
+                                        <div>
+                                            <b>{{ cap_key }}</b> ({{ item.linked_object }}.{{ item.linked_property }})
+                                        </div>
+                                        {% endfor %}
+                                    </td>
+                                    <td class="py-1 yh-col-actions">
+                                        <div class="d-flex gap-1">
+                                            <a href="?op=edit&device={{ device.id }}" class="btn btn-secondary btn-sm" title="{{ _('Edit')}}">
+                                                <i class="feather icon-edit"></i>
+                                            </a>
+                                            <a href="?op=delete&device={{ device.id }}"
+                                                onClick="return confirm('Are you sure? Please confirm.')"
+                                                class="btn btn-danger btn-sm"
+                                                title="{{ _('Delete')}}">
+                                                <i class="feather icon-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </td>
             </tr>
-            {% endfor %}
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Модальное окно с настройками -->
-<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="yh-devices-cards d-lg-none">
+    {% for key, value in devices.items() %}
+    <div class="card mb-3">
+        <div class="card-header group-header bg-body-secondary" data-group-key="{{ key }}" data-yh-group-view="cards">
+            <span class="yh-group-header-inner">
+                <span class="yh-group-title">
+                    <b>{{ key }}</b>
+                    <span class="badge bg-primary rounded-pill ms-2">{{ value|length }}</span>
+                </span>
+                <i class="fas fa-chevron-down yh-group-chevron"></i>
+            </span>
+        </div>
+        <div class="list-group list-group-flush collapse show yh-group-mobile" data-group-key="{{ key }}">
+            {% for device in value %}
+            <div class="list-group-item yh-device-card-body">
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <img src="/YandexHome/static/devices/{{ device.type }}.png" class="yh-device-icon" alt="{{ device.type }}" onError="this.src='/YandexHome/static/YandexHome.png'">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-semibold">{{ device.title }}</div>
+                        {% if device.description %}
+                        <div class="text-muted yh-device-meta">{{ device.description }}</div>
+                        {% endif %}
+                        <div class="yh-device-meta mt-1"><code>{{ device.type }}</code></div>
+                    </div>
+                </div>
+                {% if device.caps %}
+                <div class="yh-device-links mb-2">
+                    {% for cap_key, item in device.caps.items() %}
+                    <div>
+                        <b>{{ cap_key }}</b>
+                        <span class="text-muted">({{ item.linked_object }}.{{ item.linked_property }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2 yh-device-actions">
+                    <a href="?op=edit&device={{ device.id }}" class="btn btn-secondary btn-sm flex-grow-1">
+                        <i class="feather icon-edit me-1"></i><span class="btn-label">{{ _('Edit')}}</span>
+                    </a>
+                    <a href="?op=delete&device={{ device.id }}"
+                        onClick="return confirm('Are you sure? Please confirm.')"
+                        class="btn btn-danger btn-sm flex-grow-1">
+                        <i class="feather icon-trash me-1"></i><span class="btn-label">{{ _('Delete')}}</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal fade yh-settings-modal" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST">
-                <!-- Поля формы -->
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLabel">{{ _('Settings')}}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-
                     {{ form.hidden_tag() }}
                     <div class="mb-3">
                         {{ form.user_id.label(class="form-label") }}
@@ -95,42 +189,42 @@
                     </div>
                     <div class="mb-3">
                         {{ form.client_id.label(class="form-label") }}
-                        <div data-mdb-input-init class="input-group mb-3">
+                        <div class="input-group">
                             {{ form.client_id(class="form-control") }}
-                            <span class="input-group-text" onclick="genKey1();">
+                            <button type="button" class="input-group-text" onclick="genKey1();" aria-label="{{ _('Generate')}}">
                                 <i class="fas fa-sync"></i>
-                            </span>
+                            </button>
                         </div>
                     </div>
                     <div class="mb-3">
                         {{ form.client_secret.label(class="form-label") }}
-                        <div data-mdb-input-init class="input-group mb-3">
+                        <div class="input-group">
                             {{ form.client_secret(class="form-control") }}
-                            <span class="input-group-text" onclick="genKey2();">
+                            <button type="button" class="input-group-text" onclick="genKey2();" aria-label="{{ _('Generate')}}">
                                 <i class="fas fa-sync"></i>
-                            </span>
+                            </button>
                         </div>
                     </div>
                     <div class="mb-3">
                         {{ form.client_key.label(class="form-label") }}
-                        <div data-mdb-input-init class="input-group mb-3">
+                        <div class="input-group">
                             {{ form.client_key(class="form-control") }}
-                            <a class="input-group-text" style="text-decoration: none;" href="https://yandex.ru/dev/dialogs/smart-home/doc/reference-alerts/resources-alerts.html#resources-alerts__oauth" target="_blank">
+                            <a class="input-group-text text-decoration-none" href="https://yandex.ru/dev/dialogs/smart-home/doc/reference-alerts/resources-alerts.html#resources-alerts__oauth" target="_blank" rel="noopener">
                                 <i class="fas fa-info-circle"></i>
                             </a>
                         </div>
                     </div>
                     <div class="mb-3">
                         {{ form.skill_id.label(class="form-label") }}
-                        <div data-mdb-input-init class="input-group mb-3">
+                        <div class="input-group">
                             {{ form.skill_id(class="form-control") }}
-                            <a class="input-group-text" style="text-decoration: none;" href="https://dialogs.yandex.ru/developer" target="_blank">
+                            <a class="input-group-text text-decoration-none" href="https://dialogs.yandex.ru/developer" target="_blank" rel="noopener">
                                 <i class="fas fa-info-circle"></i>
                             </a>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer flex-wrap gap-2">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close')}}</button>
                     <button type="submit" class="btn btn-primary">{{ _('Submit')}}</button>
                 </div>
@@ -153,39 +247,93 @@ function getRandomHexString(length) {
   }
   return result;
 }
-// Функция для генерации ключа типа a7d85ca965b0-45b8a121
 function genKey1() {
-  const part1 = getRandomHexString(12); // Первая часть 12 символов
-  const part2 = getRandomHexString(8);  // Вторая часть 8 символов
+  const part1 = getRandomHexString(12);
+  const part2 = getRandomHexString(8);
   var element = document.getElementById("client_id");
-  if (element) 
+  if (element)
     element.value = `${part1}-${part2}`;
 }
-
-// Функция для генерации ключа типа 9a93c379-e526-47d5-a621-35cf0569c0c5
 function genKey2() {
-  const part1 = getRandomHexString(8);  // Первая часть 8 символов
-  const part2 = getRandomHexString(4);  // Вторая часть 4 символа
-  const part3 = getRandomHexString(4);  // Третья часть 4 символа
-  const part4 = getRandomHexString(4);  // Четвертая часть 4 символа
-  const part5 = getRandomHexString(12); // Пятая часть 12 символов
+  const part1 = getRandomHexString(8);
+  const part2 = getRandomHexString(4);
+  const part3 = getRandomHexString(4);
+  const part4 = getRandomHexString(4);
+  const part5 = getRandomHexString(12);
   var element = document.getElementById("client_secret");
-  if (element) 
+  if (element)
     element.value = `${part1}-${part2}-${part3}-${part4}-${part5}`;
 }
 
+var YH_GROUP_COLLAPSE_KEY = 'yandexHome_groupCollapse';
+
+function yhGetGroupCollapseState() {
+    if (typeof Storage === 'undefined') {
+        return {};
+    }
+    try {
+        return JSON.parse(localStorage.getItem(YH_GROUP_COLLAPSE_KEY) || '{}');
+    } catch (e) {
+        return {};
+    }
+}
+
+function yhSetGroupCollapsed(groupKey, collapsed) {
+    if (typeof Storage === 'undefined' || !groupKey) {
+        return;
+    }
+    var state = yhGetGroupCollapseState();
+    state[groupKey] = collapsed;
+    localStorage.setItem(YH_GROUP_COLLAPSE_KEY, JSON.stringify(state));
+}
+
+function yhGroupTargets(groupKey, view) {
+    var selector = view === 'cards' ? '.yh-group-mobile' : '.yh-group-rows';
+    return $(selector).filter(function() {
+        return $(this).attr('data-group-key') === groupKey;
+    });
+}
+
+function yhUpdateGroupChevron(groupKey, expanded) {
+    $('.group-header').filter(function() {
+        return $(this).attr('data-group-key') === groupKey;
+    }).find('.yh-group-chevron')
+        .toggleClass('fa-chevron-down', expanded)
+        .toggleClass('fa-chevron-right', !expanded);
+}
+
+function yhApplyGroupCollapseState() {
+    var state = yhGetGroupCollapseState();
+    Object.keys(state).forEach(function(groupKey) {
+        if (!state[groupKey]) {
+            return;
+        }
+        yhGroupTargets(groupKey, 'table').removeClass('show');
+        yhGroupTargets(groupKey, 'cards').removeClass('show');
+        yhUpdateGroupChevron(groupKey, false);
+    });
+}
+
 $(document).ready(function() {
-    // Обработка клика по заголовку группы
-    $('.group-header').click(function() {
-        // Находим иконку внутри этого заголовка
-        var icon = $(this).find('i');
-        // Переключаем классы иконки (стрелка вверх/вниз)
-        icon.toggleClass('fa-chevron-down fa-chevron-right');
-        
-        // Получаем target для collapse
-        var target = $(this).data('target');
-        // Переключаем видимость связанных строк
-        $(target).collapse('toggle');
+    yhApplyGroupCollapseState();
+
+    $('.group-header').on('click', function() {
+        var groupKey = $(this).attr('data-group-key');
+        var view = $(this).attr('data-yh-group-view') || 'table';
+        if (!groupKey) {
+            return;
+        }
+        yhGroupTargets(groupKey, view).collapse('toggle');
+    });
+
+    $('.yh-group-rows, .yh-group-mobile').on('hidden.bs.collapse', function() {
+        var groupKey = $(this).attr('data-group-key');
+        yhSetGroupCollapsed(groupKey, true);
+        yhUpdateGroupChevron(groupKey, false);
+    }).on('shown.bs.collapse', function() {
+        var groupKey = $(this).attr('data-group-key');
+        yhSetGroupCollapsed(groupKey, false);
+        yhUpdateGroupChevron(groupKey, true);
     });
 });
 </script>

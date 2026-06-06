@@ -44,6 +44,12 @@ from plugins.YandexHome.models.YandexHomeDevices import YaHomeDevice
 from plugins.YandexHome.constants import devices_types, devices_instance
 from app.authentication.handlers import handle_admin_required
 from app.core.lib.object import setLinkToObject, removeLinkFromObject
+from plugins.YandexHome.utils import (
+    get_yandex_rgb,
+    get_yandex_hsv,
+    yandex_rgb_to_property_value,
+    yandex_hsv_to_property_value,
+)
 
 PREFIX_CAPABILITIES = 'devices.capabilities.'
 PREFIX_PROPERTIES = 'devices.properties.'
@@ -166,7 +172,7 @@ class YandexHome(BasePlugin):
 
                 if 'parameters' in devices_instance[trait['type']]:
                     parameters = dict(devices_instance[trait['type']]['parameters'])
-                    if trait['type'] not in ['rgb', 'temperature_k', 'color_scene']:
+                    if trait['type'] not in ['rgb', 'temperature_k', 'color_scene', 'hsv']:
                         parameters['instance'] = instance_name
                     if 'range' in parameters:
                         if 'min' in trait:
@@ -260,8 +266,9 @@ class YandexHome(BasePlugin):
                         elif cap['type'] == 'water_leak_event':
                             state['value'] = 'leak' if value else 'dry'
                         elif cap['type'] == 'rgb':
-                            value = value.lstrip('#')
-                            state['value'] = int(value, 16)
+                            state['value'] = get_yandex_rgb(f"{obj}.{prop}", value)
+                        elif cap['type'] == 'hsv':
+                            state['value'] = get_yandex_hsv(f"{obj}.{prop}", value)
                         elif cap['type'] == 'open_event':
                             state['value'] = 'closed' if value == 1 else 'opened'
                         elif cap['type'] in ['open', 'volume', 'channel', 'humidity', 'brightness', 'temperature', 'temperature_k']:
@@ -548,9 +555,9 @@ class YandexHome(BasePlugin):
 
                         linked_object = capability['linked_object']
                         linked_property = capability['linked_property']
-                        value = getProperty(linked_object + "." + linked_property)
+                        prop_name = f"{linked_object}.{linked_property}"
+                        value = getProperty(prop_name)
 
-                        # todo convert value
                         if instance in ['on','mute','pause','backlight','keep_warm','ionization','oscillation','controls_locked']:
                             value = value == 1 or value == '1'
                         elif "_sensor" in instance:
@@ -560,8 +567,9 @@ class YandexHome(BasePlugin):
                         elif instance == 'water_leak_event':
                             value = 'leak' if value == 1 else 'dry'
                         elif instance == 'rgb':
-                            value = value.lstrip('#')
-                            value = int(value, 16)
+                            value = get_yandex_rgb(prop_name)
+                        elif instance == 'hsv':
+                            value = get_yandex_hsv(prop_name)
                         elif instance == 'open_event':
                             value = 'closed' if value == 1 else 'opened'
                         elif instance in ['temperature']:
@@ -656,7 +664,9 @@ class YandexHome(BasePlugin):
                             elif instance == 'open_event':
                                 value = 1 if value == 'opened' else 0
                             elif instance == 'rgb':
-                                value = hex(value)[2:]
+                                value = yandex_rgb_to_property_value(value)
+                            elif instance == 'hsv':
+                                value = yandex_hsv_to_property_value(value)
 
                             setProperty(linked_object + "." + linked_property, value, self.name)
 

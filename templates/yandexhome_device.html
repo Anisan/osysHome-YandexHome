@@ -2,145 +2,163 @@
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="YandexHome">{{ _('Yandex Home')}}</a></li>
 {% endblock %}
+{% block stylesheets %}
+{{ super() }}
+<link rel="stylesheet" href="/YandexHome/static/css/yandexhome.css">
+{% endblock %}
 {% block module %}
 
 <script src="{{ config.ASSETS_ROOT }}/plugins/vue/vue@2.js"></script>
 <script src="{{ config.ASSETS_ROOT }}/plugins/vue/axios.min.js"></script>
 
-<div id="edit_device" v-cloak>
+<div id="edit_device" v-cloak class="yh-device-form">
     <form @submit.prevent="updateDevice">
         <div class="input-group my-3">
-            <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Name')}}</span>
-            <input type="text" class="form-control" id="name" v-model="device.title">
+            <span class="input-group-text">{{ _('Name')}}</span>
+            <input type="text" class="form-control" v-model="device.title">
         </div>
         <div class="input-group mb-3">
-            <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Description')}}</span>
-            <input type="text" class="form-control" id="name" v-model="device.description">
+            <span class="input-group-text">{{ _('Description')}}</span>
+            <input type="text" class="form-control" v-model="device.description">
+        </div>
+        <div class="input-group mb-3 yh-type-row">
+            <span class="input-group-text yh-type-label">
+                {{ _('Type')}}
+                <img :src="'/YandexHome/static/devices/'+ device.type +'.png'" class="yh-type-preview-img" :alt="device.type" onError="this.src='/YandexHome/static/YandexHome.png'"/>
+            </span>
+            <select id="type-select" class="form-select" v-model="device.type">
+                <option v-for="value,key in devices_types" :value="key" :key="key">
+                    [[ value ]]
+                </option>
+            </select>
         </div>
         <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Type')}}</span>
-                <span class="input-group-text" id="inputGroup-sizing-sm">
-                    <img :src="'/YandexHome/static/devices/'+ device.type +'.png'" height="30px" :alt="device.type" onError="this.src='/YandexHome/static/YandexHome.png'"/>
-                </span>
-                <select id="type-select"  class="form-control selectpicker" v-model="device.type">
-                    <option v-for="value,key in devices_types" :value="key" :key="key" data-thumbnail="images/icon-chrome.png">
-                        [[ value ]]
-                    </option>
-                </select>
-        </div>
-        <div class="input-group mb-3">
-            <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Room')}}</span>
-            <input type="text" class="form-control" id="name" v-model="device.room">
+            <span class="input-group-text">{{ _('Room')}}</span>
+            <input type="text" class="form-control" v-model="device.room">
         </div>
         <button class="btn btn-primary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
             {{ _('Advanced')}}
-         </button>
+        </button>
         <div class="collapse" id="collapseExample">
-          <div class="card card-body">
-            <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Manufacturer')}}</span>
-                <input type="text" class="form-control" id="name" v-model="device.manufacturer">
+            <div class="card card-body mt-2">
+                <div class="input-group mb-3">
+                    <span class="input-group-text">{{ _('Manufacturer')}}</span>
+                    <input type="text" class="form-control" v-model="device.manufacturer">
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">{{ _('Model')}}</span>
+                    <input type="text" class="form-control" v-model="device.model">
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">{{ _('SW version')}}</span>
+                    <input type="text" class="form-control" v-model="device.sw_version">
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">{{ _('HW version')}}</span>
+                    <input type="text" class="form-control" v-model="device.hw_version">
+                </div>
             </div>
-            <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Model')}}</span>
-                <input type="text" class="form-control" id="name" v-model="device.model">
-            </div>
-            <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('SW version')}}</span>
-                <input type="text" class="form-control" id="name" v-model="device.sw_version">
-            </div>
-            <div class="input-group mb-3">
-                <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('HW version')}}</span>
-                <input type="text" class="form-control" id="name" v-model="device.hw_version">
-            </div>
-          </div>
         </div>
-        <div class="dropdown mt-3">
-            <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="dropdown mt-3 yh-cap-dropdown">
+            <a class="btn btn-warning dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 {{ _('Add capability')}}
             </a>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-              <li v-for="(item, key) in devices_instance">
+            <ul class="dropdown-menu">
+              <li v-for="(item, key) in devices_instance" :key="'cap-menu-'+key">
                 <h6 v-if="key=='controls_locked'" class="dropdown-header">{{ _('Actions')}}</h6>
                 <h6 v-if="key=='amperage_sensor'" class="dropdown-header">{{ _('Sensors number')}}</h6>
                 <h6 v-if="key=='vibration_event'" class="dropdown-header">{{ _('Sensors event')}}</h6>
-                <a :class="'dropdown-item ms-3' + (key in device.capability ? ' disabled' :'')" href="#" @click="addCapability(item)">[[ item.description ]]</a>
+                <a :class="'dropdown-item ms-3' + (key in device.capability ? ' disabled' :'')" href="#" @click.prevent="addCapability(item)">[[ item.description ]]</a>
               </li>
             </ul>
         </div>
-        <div class="list-group" v-if="device && Object.keys(device.capability).length > 0">
-            <div class="list-group-item list-group-item-action" v-for="item,key in device.capability" :key="'cap_'+key">
-                [[ item.description ]]
-                <div class="d-flex align-items-start">
-                    <div>
-                        <select-with-filter placeholder="{{ _('Select object')}}" :options="objectOptions" v-model="item.linked_object" @changed="item.linked_property = null" style="min-width: 300px;max-width: 300px;"></select-with-filter>
-                    </div>
-                    <div>
-                        <select-with-filter placeholder="{{ _('Select property')}}" v-if="item.linked_object && item.linked_object in objects" :options="objects[item.linked_object].properties" v-model="item.linked_property"  style="min-width: 300px;max-width: 300px;"></select-with-filter>
-                    </div>
-                    <div class="form-check mt-2 mx-2">
-                        <input class="form-check-input" type="checkbox" v-model="item.reportable" id="flexCheckDefault">
-                        <label class="form-check-label" for="flexCheckDefault">
-                            {{ _('Reportable')}}
-                        </label>
-                    </div>
-                    <div v-if="item.type in devices_instance && devices_instance[item.type].capability ==='on_off'" class="form-check mt-2 mx-2">
-                        <input class="form-check-input" type="checkbox" v-model="item.split" id="flexCheckDefault">
-                        <label class="form-check-label" for="flexCheckDefault">
-                            {{ _('Split')}}
-                        </label>
-                    </div>
-                    <a class="btn btn-danger ms-2 ms-auto" @click="delCapability(key)"><i class="fas fa-trash"></i></a>
-                </div>
-                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'range' in devices_instance[item.type].parameters" class="d-inline-flex mb-2">
-                    <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Min')}}</span>
-                        <input type="number" class="form-control" aria-label="Min" v-model="item.min">
-                    </div>
-                    <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Max')}}</span>
-                        <input type="number" class="form-control" aria-label="Max" v-model="item.max">
-                    </div>
-                    <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text" id="inputGroup-sizing-sm">{{ _('Precision')}}</span>
-                        <input type="number" class="form-control" step="0.1" aria-label="Precision" v-model="item.precision">
-                    </div>
-                </div>
-                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'modes' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
-                    <div class="dropdown">
-                        <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ _('Add mode')}}
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                          <li v-for="mode in devices_instance[item.type].parameters.modes">
-                            <a class="dropdown-item ms-3" href="#" @click="addMode(key,mode)">[[ mode.value ]]</a>
-                          </li>
-                        </ul>
-                    </div>
-                    <a v-for="mode in item.modes" class="btn btn-outline-danger ms-2" href="#" @click="delMode(key, mode.value)">
-                        [[ mode.value ]]
+        <div class="list-group mt-3" v-if="device && Object.keys(device.capability).length > 0">
+            <div class="list-group-item yh-capability-item" v-for="item,key in device.capability" :key="'cap_'+key">
+                <div class="yh-capability-header">
+                    <div class="yh-capability-title">[[ item.description ]]</div>
+                    <button type="button" class="btn btn-danger btn-sm yh-capability-delete" @click="delCapability(key)" title="{{ _('Delete')}}">
                         <i class="fas fa-trash"></i>
-                    </a>
+                    </button>
                 </div>
-                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'color_scene' in devices_instance[item.type].parameters"  class="d-inline-flex my-2">
-                    <div class="dropdown">
-                        <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ _('Add scene')}}
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                          <li v-for="scene in devices_instance[item.type].parameters.color_scene.scenes">
-                            <a class="dropdown-item ms-3" href="#" @click="addScene(key,scene)">[[ scene.id ]]</a>
-                          </li>
-                        </ul>
+                <div class="yh-capability-row">
+                    <div class="yh-capability-select">
+                        <select-with-filter placeholder="{{ _('Select object')}}" :options="objectOptions" v-model="item.linked_object" @changed="item.linked_property = null"></select-with-filter>
                     </div>
-                    <a v-for="scene in item.scenes" class="btn btn-outline-danger ms-2" href="#" @click="delScene(key, scene.id)">
-                        [[ scene.id ]]
-                        <i class="fas fa-trash"></i>
-                    </a>
+                    <div class="yh-capability-select" v-if="item.linked_object && item.linked_object in objects">
+                        <select-with-filter placeholder="{{ _('Select property')}}" :options="objects[item.linked_object].properties" v-model="item.linked_property"></select-with-filter>
+                    </div>
+                    <div class="yh-capability-options">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" v-model="item.reportable" :id="'reportable-'+key">
+                            <label class="form-check-label" :for="'reportable-'+key">
+                                {{ _('Reportable')}}
+                            </label>
+                        </div>
+                        <div v-if="item.type in devices_instance && devices_instance[item.type].capability ==='on_off'" class="form-check">
+                            <input class="form-check-input" type="checkbox" v-model="item.split" :id="'split-'+key">
+                            <label class="form-check-label" :for="'split-'+key">
+                                {{ _('Split')}}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'range' in devices_instance[item.type].parameters" class="yh-range-fields mt-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">{{ _('Min')}}</span>
+                        <input type="number" class="form-control" v-model="item.min">
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">{{ _('Max')}}</span>
+                        <input type="number" class="form-control" v-model="item.max">
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">{{ _('Precision')}}</span>
+                        <input type="number" class="form-control" step="0.1" v-model="item.precision">
+                    </div>
+                </div>
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'modes' in devices_instance[item.type].parameters" class="mt-2">
+                    <div class="yh-tag-toolbar">
+                        <div class="dropdown yh-cap-dropdown">
+                            <a class="btn btn-warning btn-sm dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {{ _('Add mode')}}
+                            </a>
+                            <ul class="dropdown-menu">
+                              <li v-for="mode in devices_instance[item.type].parameters.modes" :key="'mode-'+key+'-'+mode.value">
+                                <a class="dropdown-item" href="#" @click.prevent="addMode(key,mode)">[[ mode.value ]]</a>
+                              </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="yh-tag-list mt-2">
+                        <a v-for="mode in item.modes" :key="'mode-tag-'+key+'-'+mode.value" class="btn btn-outline-danger btn-sm" href="#" @click.prevent="delMode(key, mode.value)">
+                            [[ mode.value ]]
+                            <i class="fas fa-trash ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+                <div v-if="item.type in devices_instance && devices_instance[item.type].parameters && 'color_scene' in devices_instance[item.type].parameters" class="mt-2">
+                    <div class="yh-tag-toolbar">
+                        <div class="dropdown yh-cap-dropdown">
+                            <a class="btn btn-warning btn-sm dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {{ _('Add scene')}}
+                            </a>
+                            <ul class="dropdown-menu">
+                              <li v-for="scene in devices_instance[item.type].parameters.color_scene.scenes" :key="'scene-'+key+'-'+scene.id">
+                                <a class="dropdown-item" href="#" @click.prevent="addScene(key,scene)">[[ scene.id ]]</a>
+                              </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="yh-tag-list mt-2">
+                        <a v-for="scene in item.scenes" :key="'scene-tag-'+key+'-'+scene.id" class="btn btn-outline-danger btn-sm" href="#" @click.prevent="delScene(key, scene.id)">
+                            [[ scene.id ]]
+                            <i class="fas fa-trash ms-1"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="my-2 mt-3">
+        <div class="yh-form-actions my-3 mt-3">
             <button class="btn btn-success" type="submit" :disabled="isSaving">
                 <span v-if="isSaving" class="fas fa-rotate me-2" role="status" aria-hidden="true"></span>
                 {{ _('Save')}}
@@ -148,22 +166,21 @@
             <a href="YandexHome" class="btn btn-secondary">{{ _('Cancel')}}</a>
         </div>
     </form>
-    <p>[[ message ]]</p>
+    <p class="yh-message" v-if="message">[[ message ]]</p>
 </div>
 <script src="{{ config.ASSETS_ROOT }}/js/components/select-with-filter.js"></script>
 <script>
     new Vue({
         el: '#edit_device',
-        delimiters: ['[[', ']]'], // Измененные разделители
+        delimiters: ['[[', ']]'],
         data: {
             isSaving: false,
             device: {
-                id: '', // Идентификатор 
+                id: '',
                 title: '',
                 description: '',
                 type: null,
                 room:"",
-                description:"",
                 manufacturer:"",
                 model:"",
                 sw_version:"",
@@ -174,13 +191,11 @@
             devices_types:[],
             devices_instance:[],
             objects:[],
-            isOpen:false,
         },
         async created() {
             await this.fetchTypes()
             await this.fetchObjects()
             const deviceId = '{{id}}';
-           //this.message = deviceId
             if (deviceId != 'None')
                 this.fetchDevice(deviceId);
         },
@@ -216,11 +231,9 @@
                     });
             },
             fetchDevice(deviceId) {
-                // Получение данных пользователя с сервера
                 axios.get(`/YandexHome/device/${deviceId}`)
                     .then(response => {
                         var device = response.data;
-                        console.log(device.capability)
                         device.capability = JSON.parse(device.capability)
                         this.device = device;
                     })
@@ -232,7 +245,6 @@
             updateDevice() {
                 this.isSaving = true
                 this.message = 'Saving...'
-                // Обновление данных пользователя на сервере
                 axios.post(`/YandexHome/device/${this.device.id}`, this.device)
                     .then(response => {
                         this.message = 'Device updated successfully!';
@@ -245,7 +257,6 @@
                     });
             },
             addCapability(item){
-                console.log('add', item)
                 cap = {
                     "type":item.instance_name,
                     "description":item.description,
@@ -270,10 +281,8 @@
                         cap['scenes'] = this.devices_instance[item.instance_name]['parameters']['color_scene']['scenes']
                 }
                 this.$set(this.device.capability, item.instance_name, cap);
-                console.log(this.device)
             },
             delCapability(key) {
-                // Удаляем запись из словаря
                 this.$delete(this.device.capability, key);
             },
             addMode(key,value){
@@ -295,5 +304,5 @@
         }
     });
 </script>
-    
+
 {% endblock %}
