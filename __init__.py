@@ -42,7 +42,7 @@ from app.database import row2dict, session_scope
 from plugins.YandexHome.forms.SettingsForm import SettingsForm
 from plugins.YandexHome.models.YandexHomeDevices import YaHomeDevice
 from plugins.YandexHome.constants import devices_types, devices_instance
-from app.authentication.handlers import handle_admin_required
+from app.authentication.handlers import handle_admin_required, public_endpoint
 from app.core.lib.object import setLinkToObject, removeLinkFromObject
 from plugins.YandexHome.utils import (
     get_yandex_rgb,
@@ -410,6 +410,7 @@ class YandexHome(BasePlugin):
 
         # OAuth entry point
         @self.blueprint.route('/YandexHome/auth/', methods=['GET', 'POST'])
+        @public_endpoint
         def auth():
             try:
                 if request.method == 'GET':
@@ -449,6 +450,7 @@ class YandexHome(BasePlugin):
 
         # OAuth, token request
         @self.blueprint.route('/YandexHome/token/', methods=['POST'])
+        @public_endpoint
         def token():
             try:
                 request.user_id = self.last_code_user
@@ -479,16 +481,19 @@ class YandexHome(BasePlugin):
 
         # Just placeholder for root
         @self.blueprint.route('/YandexHome/')
+        @public_endpoint
         def root():
             return "Your smart home is ready."
 
         # Script must response 200 OK on this request
         @self.blueprint.route('/YandexHome/v1.0', methods=['GET', 'POST'])
+        @public_endpoint
         def main_v10():
             return "OK"
 
         # Method to revoke token
         @self.blueprint.route('/YandexHome/v1.0/user/unlink', methods=['POST'])
+        @public_endpoint
         def unlink():
             try:
                 user_id = self.check_token()
@@ -507,6 +512,7 @@ class YandexHome(BasePlugin):
 
         # Devices list
         @self.blueprint.route('/YandexHome/v1.0/user/devices', methods=['GET'])
+        @public_endpoint
         def devices_list():
             try:
                 user_id = self.check_token()
@@ -528,6 +534,7 @@ class YandexHome(BasePlugin):
 
         # Method to query current device status
         @self.blueprint.route('/YandexHome/v1.0/user/devices/query', methods=['POST'])
+        @public_endpoint
         def query():
             try:
                 user_id = self.check_token()
@@ -613,6 +620,7 @@ class YandexHome(BasePlugin):
 
         # Method to execute some action with devices
         @self.blueprint.route('/YandexHome/v1.0/user/devices/action', methods=['POST'])
+        @public_endpoint
         def action():
             try:
                 user_id = self.check_token()
