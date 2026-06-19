@@ -22,6 +22,7 @@
   "Chandelier": "샹들리에",
   "Circuit breaker, smart relay": "차단기, 스마트 릴레이",
   "Cleaning mode": "청소 모드",
+  "Click the key button to open authorization (use the Yandex account that created the skill), then copy the token from the opened page into Client key.": "키 버튼을 클릭하여 인증을 연 다음(스킬을 생성한 Yandex 계정 사용) 열린 페이지의 토큰을 클라이언트 키에 복사합니다.",
   "Climate sensor": "기후 센서",
   "Coffee machine mode": "커피 머신 모드",
   "Coffee maker, coffee machine": "커피메이커, 커피머신",
@@ -47,6 +48,8 @@
   "Gas readings": "가스 판독값",
   "Gas sensor": "가스 센서",
   "Generate": "생성하다",
+  "Get OAuth token": "OAuth 토큰 가져오기",
+  "Get authorization code": "인증 코드 받기",
   "HW version": "HW 버전",
   "Heat meter": "열량계",
   "Heat readings": "열 판독값",
@@ -70,6 +73,7 @@
   "Operation mode of lighting elements": "조명 요소의 작동 모드",
   "Operation programs": "운영 프로그램",
   "Operation speed": "작동 속도",
+  "Optional. Enables automatic token refresh.": "선택 과목. 자동 토큰 새로 고침을 활성화합니다.",
   "Other devices": "기타 장치",
   "Pet feeder": "애완동물 급식기",
   "Pet water fountain": "애완동물 식수대",
@@ -112,5 +116,6 @@
   "Water leak sensor": "누수 센서",
   "Water level": "수위",
   "Water readings": "물 판독값",
-  "Yandex Home": "Yandex 홈"
+  "Yandex Home": "Yandex 홈",
+  "then exchange it for access_token and refresh_token.": "그런 다음 access_token 및 Refresh_token으로 교환하십시오."
 }

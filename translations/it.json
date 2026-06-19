@@ -22,6 +22,7 @@
   "Chandelier": "Lampadario",
   "Circuit breaker, smart relay": "Interruttore automatico, relè smart",
   "Cleaning mode": "Modalità di pulizia",
+  "Click the key button to open authorization (use the Yandex account that created the skill), then copy the token from the opened page into Client key.": "Fai clic sul pulsante della chiave per aprire l'autorizzazione (utilizza l'account Yandex che ha creato la competenza), quindi copia il token dalla pagina aperta nella Chiave cliente.",
   "Climate sensor": "Sensore climatico",
   "Coffee machine mode": "Modalità macchina del caffe",
   "Coffee maker, coffee machine": "Caffettiera, macchina per il caffè",
@@ -47,6 +48,8 @@
   "Gas readings": "Letture del gas",
   "Gas sensor": "Sensore di gas",
   "Generate": "Generare",
+  "Get OAuth token": "Ottieni il token OAuth",
+  "Get authorization code": "Ottieni il codice di autorizzazione",
   "HW version": "Versione HW",
   "Heat meter": "Contatore di calore",
   "Heat readings": "Letture di calore",
@@ -70,6 +73,7 @@
   "Operation mode of lighting elements": "Modalità di funzionamento degli elementi di illuminazione",
   "Operation programs": "Programmi operativi",
   "Operation speed": "Velocità operativa",
+  "Optional. Enables automatic token refresh.": "Opzionale. Abilita l'aggiornamento automatico del token.",
   "Other devices": "Altri dispositivi",
   "Pet feeder": "Alimentatore per animali domestici",
   "Pet water fountain": "Fontana d'acqua per animali domestici",
@@ -112,5 +116,6 @@
   "Water leak sensor": "Sensore perdite d'acqua",
   "Water level": "Livello dell'acqua",
   "Water readings": "Letture dell'acqua",
-  "Yandex Home": "Casa Yandex"
+  "Yandex Home": "Casa Yandex",
+  "then exchange it for access_token and refresh_token.": "quindi scambialo con access_token e refresh_token."
 }

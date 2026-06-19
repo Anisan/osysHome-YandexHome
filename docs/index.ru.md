@@ -1,17 +1,14 @@
-# YandexHome - Документация
+# YandexHome
 
-![YandexHome Icon](../static/YandexHome.png "Модуль YandexHome")
+Плагин интеграции osysHome с Yandex Smart Home (Алиса).
 
-`YandexHome` связывает объекты osysHome с платформой Яндекс Умный дом (Алиса).
+Документация:
 
-## Разделы
+- [Настройка](SETUP.ru.md) — навык в Яндекс.Диалогах, OAuth, поля модуля, OAuth-токены для уведомлений
 
-- [Руководство пользователя](USER_GUIDE.ru.md)
-- [Техническая документация](TECHNICAL_REFERENCE.ru.md)
+## С чего начать
 
-## Быстрые ссылки
-
-- Админка модуля: `/admin/YandexHome`
-- OAuth authorize: `/YandexHome/auth/`
-- OAuth token: `/YandexHome/token/`
-- Smart Home API root: `/YandexHome/v1.0`
+1. [Требования и создание навыка](SETUP.ru.md#требования)
+2. [Связка аккаунтов и настройки модуля](SETUP.ru.md#настройка-навыка-в-яндексдиалогах)
+3. [OAuth-токены для уведомлений (Client key / Client refresh key)](SETUP.ru.md#oauth-токены-для-уведомлений)
+4. [Добавление устройств](SETUP.ru.md#добавление-устройств)

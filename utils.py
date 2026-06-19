@@ -1,7 +1,21 @@
 import json
+import hashlib
+import base64
+import secrets
 
 from app.core.lib.object import getProperty
 from app.core.lib.converters.color_value import normalize_hex_input
+
+
+def generate_pkce_pair():
+    """Сгенерировать code_verifier и code_challenge (S256) для OAuth PKCE."""
+    verifier = secrets.token_urlsafe(48)
+    if len(verifier) < 43:
+        verifier += secrets.token_urlsafe(8)
+    verifier = verifier[:128]
+    digest = hashlib.sha256(verifier.encode('ascii')).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode('ascii')
+    return verifier, challenge
 
 
 def _hex_to_yandex_int(hex_str):

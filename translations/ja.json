@@ -22,6 +22,7 @@
   "Chandelier": "シャンデリア",
   "Circuit breaker, smart relay": "ブレーカー、スマートリレー",
   "Cleaning mode": "クリーニングモード",
+  "Click the key button to open authorization (use the Yandex account that created the skill), then copy the token from the opened page into Client key.": "キーボタンをクリックして認証を開き(スキルを作成したYandexアカウントを使用)、開いたページからトークンをクライアントキーにコピーします。",
   "Climate sensor": "気候センサー",
   "Coffee machine mode": "コーヒーマシンモード",
   "Coffee maker, coffee machine": "コーヒーメーカー、コーヒーマシン",
@@ -47,6 +48,8 @@
   "Gas readings": "ガスの測定値",
   "Gas sensor": "ガスセンサー",
   "Generate": "生成する",
+  "Get OAuth token": "OAuthトークンを取得する",
+  "Get authorization code": "認証コードを取得する",
   "HW version": "ハードウェアバージョン",
   "Heat meter": "熱計",
   "Heat readings": "熱測定値",
@@ -70,6 +73,7 @@
   "Operation mode of lighting elements": "照明要素の動作モード",
   "Operation programs": "動作プログラム",
   "Operation speed": "動作速度",
+  "Optional. Enables automatic token refresh.": "オプション。自動トークン更新を有効にします。",
   "Other devices": "その他のデバイス",
   "Pet feeder": "ペットフィーダー",
   "Pet water fountain": "ペット用水飲み場",
@@ -112,5 +116,6 @@
   "Water leak sensor": "水漏れセンサー",
   "Water level": "水位",
   "Water readings": "水の測定値",
-  "Yandex Home": "ヤンデックス ホーム"
+  "Yandex Home": "ヤンデックス ホーム",
+  "then exchange it for access_token and refresh_token.": "次に、それをaccess_tokenとrefresh_tokenに交換します。"
 }

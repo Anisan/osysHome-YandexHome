@@ -22,6 +22,7 @@
   "Chandelier": "Люстра",
   "Circuit breaker, smart relay": "Автомат, розумне реле",
   "Cleaning mode": "Режим збирання",
+  "Click the key button to open authorization (use the Yandex account that created the skill), then copy the token from the opened page into Client key.": "Натисніть кнопку з ключем — відкривається сторінка авторизації (ввійдіть під обліковий запис, на якому створено навік), скопіюйте токен із цією сторінкою в поле Ключ клієнта.",
   "Climate sensor": "Датчик клімату",
   "Coffee machine mode": "Режим кавомашини",
   "Coffee maker, coffee machine": "Кавоварка, кавоварка",
@@ -47,6 +48,8 @@
   "Gas readings": "Покази газу",
   "Gas sensor": "Датчик газу",
   "Generate": "Генерувати",
+  "Get OAuth token": "Отримати OAuth-токен",
+  "Get authorization code": "Отримати код авторизації",
   "HW version": "Апаратна версія",
   "Heat meter": "Лічильник тепла",
   "Heat readings": "Показання тепла",
@@ -70,6 +73,7 @@
   "Operation mode of lighting elements": "Режим роботи елементів, що світяться",
   "Operation programs": "Програми роботи",
   "Operation speed": "Швидкість роботи",
+  "Optional. Enables automatic token refresh.": "Необязательно. Позволяє автоматично оновлювати токен.",
   "Other devices": "Інші пристрої",
   "Pet feeder": "Годівниця для вихованця",
   "Pet water fountain": "Поїлка для вихованця",
@@ -112,5 +116,6 @@
   "Water leak sensor": "Датчик протікання води",
   "Water level": "Рівень води",
   "Water readings": "Показання води",
-  "Yandex Home": "Яндекс Будинок"
+  "Yandex Home": "Яндекс Будинок",
+  "then exchange it for access_token and refresh_token.": "Потім обміняйте його на access_token і refresh_token."
 }

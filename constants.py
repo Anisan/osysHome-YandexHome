@@ -1,5 +1,21 @@
 from app import safe_translate as _
 
+# OAuth-приложение Яндекс.Диалогов для сервиса уведомлений (callback/state, callback/discovery).
+# Токен нужно получать от аккаунта, на котором создан навык умного дома.
+YANDEX_DIALOGS_OAUTH_CLIENT_ID = 'c473ca268cd749d3a8371351a8f2bcbd'
+YANDEX_DIALOGS_OAUTH_TOKEN_URL = (
+    'https://oauth.yandex.ru/authorize?response_type=token&client_id='
+    + YANDEX_DIALOGS_OAUTH_CLIENT_ID
+)
+YANDEX_DIALOGS_OAUTH_REDIRECT_URI = 'https://oauth.yandex.ru/verification_code'
+YANDEX_DIALOGS_OAUTH_CODE_URL = (
+    'https://oauth.yandex.ru/authorize?response_type=code&client_id='
+    + YANDEX_DIALOGS_OAUTH_CLIENT_ID
+    + '&redirect_uri=' + YANDEX_DIALOGS_OAUTH_REDIRECT_URI
+)
+YANDEX_OAUTH_TOKEN_ENDPOINT = 'https://oauth.yandex.ru/token'
+# У публичного OAuth-приложения Яндекс.Диалогов нет client_secret — refresh_token не используется.
+
 devices_types = {
     "camera": _("Video camera, video intercom, door peephole with camera"),
     "cooking": _("Refrigerator, oven"),

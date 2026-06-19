@@ -22,6 +22,7 @@
   "Chandelier": "枝形吊灯",
   "Circuit breaker, smart relay": "断路器，智能继电器",
   "Cleaning mode": "清洁模式",
+  "Click the key button to open authorization (use the Yandex account that created the skill), then copy the token from the opened page into Client key.": "单击密钥按钮打开授权（使用创建技能的Yandex帐户），然后将打开的页面中的令牌复制到客户端密钥中。",
   "Climate sensor": "气候传感器",
   "Coffee machine mode": "咖啡机模式",
   "Coffee maker, coffee machine": "咖啡机、咖啡机",
@@ -47,6 +48,8 @@
   "Gas readings": "气体读数",
   "Gas sensor": "气体传感器",
   "Generate": "产生",
+  "Get OAuth token": "获取 OAuth 令牌",
+  "Get authorization code": "获取授权码",
   "HW version": "硬件版本",
   "Heat meter": "热量表",
   "Heat readings": "热量读数",
@@ -70,6 +73,7 @@
   "Operation mode of lighting elements": "照明元件的工作方式",
   "Operation programs": "操作程序",
   "Operation speed": "运算速度",
+  "Optional. Enables automatic token refresh.": "选修的。启用自动令牌刷新。",
   "Other devices": "其他设备",
   "Pet feeder": "宠物喂食器",
   "Pet water fountain": "宠物饮水器",
@@ -112,5 +116,6 @@
   "Water leak sensor": "漏水传感器",
   "Water level": "水位",
   "Water readings": "水读数",
-  "Yandex Home": "Yandex 主页"
+  "Yandex Home": "Yandex 主页",
+  "then exchange it for access_token and refresh_token.": "然后兑换成access_token和refresh_token。"
 }

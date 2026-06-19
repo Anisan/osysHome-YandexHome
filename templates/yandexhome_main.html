@@ -208,11 +208,26 @@
                     <div class="mb-3">
                         {{ form.client_key.label(class="form-label") }}
                         <div class="input-group">
-                            {{ form.client_key(class="form-control") }}
-                            <a class="input-group-text text-decoration-none" href="https://yandex.ru/dev/dialogs/smart-home/doc/reference-alerts/resources-alerts.html#resources-alerts__oauth" target="_blank" rel="noopener">
-                                <i class="fas fa-info-circle"></i>
+                            {{ form.client_key(class="form-control", id="client_key") }}
+                            <a class="input-group-text text-decoration-none" href="{{ oauth_token_url }}" target="_blank" rel="noopener" title="{{ _('Get OAuth token')}}">
+                                <i class="fas fa-key"></i>
                             </a>
                         </div>
+                        <div class="form-text">{{ _('Click the key button to open authorization (use the Yandex account that created the skill), then copy the token from the opened page into Client key.')}}</div>
+                        <div class="form-text mb-0">
+                            {{ _('Or get authorization code') }}
+                            <a href="#" id="yh_oauth_auth_link">{{ _('via PKCE')}}</a>,
+                            {{ _('paste it below and click Exchange to fill Client key automatically.') }}
+                        </div>
+                        <label class="form-label mt-2" for="yh_oauth_code">{{ _('Authorization code')}}</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="yh_oauth_code" autocomplete="off"
+                                placeholder="{{ _('Code or redirect URL from Yandex')}}">
+                            <button type="button" class="btn btn-outline-primary" id="yh_oauth_exchange_btn">
+                                {{ _('Exchange for tokens')}}
+                            </button>
+                        </div>
+                        <div class="form-text" id="yh_oauth_exchange_status"></div>
                     </div>
                     <div class="mb-3">
                         {{ form.skill_id.label(class="form-label") }}
@@ -266,6 +281,7 @@ function genKey2() {
 }
 
 var YH_GROUP_COLLAPSE_KEY = 'yandexHome_groupCollapse';
+var YH_OAUTH_STATE_KEY = 'yh_oauth_state';
 
 function yhGetGroupCollapseState() {
     if (typeof Storage === 'undefined') {
@@ -316,6 +332,70 @@ function yhApplyGroupCollapseState() {
 
 $(document).ready(function() {
     yhApplyGroupCollapseState();
+
+    $('#yh_oauth_auth_link').on('click', function(e) {
+        e.preventDefault();
+        fetch('/YandexHome/oauth/start')
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                if (!result.ok || !result.data.ok) {
+                    throw new Error((result.data && result.data.error) || '{{ _("Failed to start authorization") }}');
+                }
+                sessionStorage.setItem(YH_OAUTH_STATE_KEY, result.data.state);
+                window.open(result.data.auth_url, '_blank', 'noopener');
+            })
+            .catch(function(err) {
+                $('#yh_oauth_exchange_status')
+                    .text(err.message || '{{ _("Failed to start authorization") }}')
+                    .addClass('text-danger')
+                    .removeClass('text-success');
+            });
+    });
+
+    $('#yh_oauth_exchange_btn').on('click', function() {
+        var code = $('#yh_oauth_code').val().trim();
+        var statusEl = $('#yh_oauth_exchange_status');
+        var csrfToken = $('input[name="csrf_token"]').val();
+        var oauthState = sessionStorage.getItem(YH_OAUTH_STATE_KEY) || '';
+        if (!code) {
+            statusEl.text('{{ _("Authorization code is required") }}').addClass('text-danger').removeClass('text-success');
+            return;
+        }
+        if (!oauthState) {
+            statusEl.text('{{ _("Open authorization via the PKCE link first") }}').addClass('text-danger').removeClass('text-success');
+            return;
+        }
+        statusEl.text('{{ _("Exchanging...") }}').removeClass('text-danger text-success');
+        $('#yh_oauth_exchange_btn').prop('disabled', true);
+        fetch('/YandexHome/oauth/exchange', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ code: code, oauth_state: oauthState })
+        }).then(function(response) {
+            return response.json().then(function(data) {
+                return { ok: response.ok, data: data };
+            });
+        }).then(function(result) {
+            if (!result.ok || !result.data.ok) {
+                throw new Error((result.data && result.data.error) || '{{ _("Failed to exchange authorization code") }}');
+            }
+            $('#client_key').val(result.data.client_key || '');
+            $('#yh_oauth_code').val('');
+            sessionStorage.removeItem(YH_OAUTH_STATE_KEY);
+            statusEl.text('{{ _("Client key saved successfully.") }}').addClass('text-success').removeClass('text-danger');
+        }).catch(function(err) {
+            statusEl.text(err.message || '{{ _("Failed to exchange authorization code") }}').addClass('text-danger').removeClass('text-success');
+        }).finally(function() {
+            $('#yh_oauth_exchange_btn').prop('disabled', false);
+        });
+    });
 
     $('.group-header').on('click', function() {
         var groupKey = $(this).attr('data-group-key');

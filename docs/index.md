@@ -1,17 +1,14 @@
-# YandexHome - Documentation
+# YandexHome
 
-![YandexHome Icon](../static/YandexHome.png "YandexHome module")
+osysHome integration plugin for Yandex Smart Home (Alice).
 
-`YandexHome` connects osysHome objects to Yandex Smart Home (Alice).
+Documentation:
 
-## Sections
+- [Setup](SETUP.md) — Yandex Dialog skill, OAuth, module fields, notification OAuth tokens
 
-- [User Guide](USER_GUIDE.md)
-- [Technical Reference](TECHNICAL_REFERENCE.md)
+## Quick start
 
-## Quick Links
-
-- Module admin page: `/admin/YandexHome`
-- OAuth authorize: `/YandexHome/auth/`
-- OAuth token: `/YandexHome/token/`
-- Smart Home API root: `/YandexHome/v1.0`
+1. [Requirements and skill creation](SETUP.md#requirements)
+2. [Account linking and module settings](SETUP.md#yandex-dialog-skill-setup)
+3. [OAuth tokens for notifications (Client key / Client refresh key)](SETUP.md#oauth-tokens-for-notifications)
+4. [Adding devices](SETUP.md#adding-devices)

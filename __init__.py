@@ -2,26 +2,7 @@ r'''
 # Модуль YandexHome
 Управление умным домом с помощью Алисы от Яндекса.
 
-## Требования
-* Доменное имя
-* SSL сертификат для работы HTTPS (можно использовать бесплатный от Let's Entrypt)
-
-## Установка
-* Идём на https://dialogs.yandex.ru/ и нажимаем "Создать навык" -> "Создать диалог" -> "Умный дом"
-* Заполняем название (не принципиально)
-* Заполняем Endpoint URL: https://_ваш-домен_/YandexHome
-* Не показывать в каталоге -> ставим галочку
-* Официальный навык -> нет
-* Заполняем остальные поля и загружаем иконку - всё это абсолютно неважно для приватного навыка
-* Нажимаем "Авторизация" -> "Cоздать"
-* Придумываем, запоминаем и вписываем идентификатор приложения и секрет
-* URL авторизации: https://_ваш-домен_/YandexHome/auth/
-* URL для получения токена: https://_ваш-домен_/YandexHome/token/
-* "Сохранить"->"Cохранить"->"На модерацию" - модерация должна пройти мгновенно в случае приватного навыка
-* "Опубликовать"
-* Укажите Username, Password, Client ID, Client secret в настройках модуля
-* Откройте вкладку "Тестирование" в панели управления Яндекс диалогами и попробуйте связать аккаунты, используя указанные в настройках имя пользователя и пароль
-* Проверяйте, должно работать как в панели для тестирования, так и на всех устройствах привязанных к вашему аккаунту
+Документация по настройке: plugins/YandexHome/docs/SETUP.ru.md
 '''
 
 import os
@@ -29,19 +10,29 @@ import time
 import string
 import random
 import json
+import secrets
 import requests
 import urllib
 import traceback
+from urllib.parse import parse_qs, urlparse, quote
 from sqlalchemy import or_
 from flask import request, render_template, jsonify, redirect, make_response
 from app.configuration import Config
 from app.core.main.BasePlugin import BasePlugin
-from app.core.lib.cache import findInCache, saveToCache
+from app.core.lib.cache import findInCache, saveToCache, deleteFromCache
 from app.core.lib.object import getProperty, setProperty
 from app.database import row2dict, session_scope
 from plugins.YandexHome.forms.SettingsForm import SettingsForm
 from plugins.YandexHome.models.YandexHomeDevices import YaHomeDevice
-from plugins.YandexHome.constants import devices_types, devices_instance
+from plugins.YandexHome.constants import (
+    devices_types,
+    devices_instance,
+    YANDEX_DIALOGS_OAUTH_CLIENT_ID,
+    YANDEX_DIALOGS_OAUTH_TOKEN_URL,
+    YANDEX_DIALOGS_OAUTH_CODE_URL,
+    YANDEX_DIALOGS_OAUTH_REDIRECT_URI,
+    YANDEX_OAUTH_TOKEN_ENDPOINT,
+)
 from app.authentication.handlers import handle_admin_required, public_endpoint
 from app.core.lib.object import setLinkToObject, removeLinkFromObject
 from plugins.YandexHome.utils import (
@@ -49,6 +40,7 @@ from plugins.YandexHome.utils import (
     get_yandex_hsv,
     yandex_rgb_to_property_value,
     yandex_hsv_to_property_value,
+    generate_pkce_pair,
 )
 
 PREFIX_CAPABILITIES = 'devices.capabilities.'
@@ -68,6 +60,132 @@ class YandexHome(BasePlugin):
         self.last_code = None
         self.last_code_user = None
         self.last_code_time = None
+        self._auth_error_notified_at = 0
+
+    def _notify_auth_error(self, response):
+        """Уведомить администратора об истёкшем OAuth-токене (не чаще раза в час)."""
+        now = time.time()
+        if now - self._auth_error_notified_at < 3600:
+            return
+        self._auth_error_notified_at = now
+        self.logger.error(
+            "YandexHome: OAuth token rejected (HTTP %s): %s. Get a new token: %s",
+            response.status_code,
+            response.text[:200],
+            YANDEX_DIALOGS_OAUTH_TOKEN_URL,
+        )
+        try:
+            from app.core.lib.common import addNotify
+            from app.core.lib.constants import CategoryNotify
+
+            addNotify(
+                "YandexHome: истёк OAuth-токен",
+                f"Обновите Client key в настройках модуля.",
+                CategoryNotify.Warning,
+                source=self.name,
+            )
+        except Exception:
+            self.logger.exception("YandexHome: failed to send auth error notification")
+
+    def _parse_authorization_code(self, raw):
+        """Извлечь code из строки или URL редиректа Яндекс OAuth."""
+        raw = (raw or '').strip()
+        if not raw:
+            return None
+        if 'code=' not in raw:
+            return raw
+        query = urlparse(raw).query if '://' in raw else raw.lstrip('?')
+        codes = parse_qs(query).get('code', [])
+        return codes[0] if codes else None
+
+    def _create_oauth_pkce_session(self):
+        """Создать PKCE-сессию на сервере и вернуть state + URL авторизации."""
+        state = secrets.token_urlsafe(16)
+        verifier, challenge = generate_pkce_pair()
+        saveToCache(state, verifier.encode('utf-8'), self.name)
+        auth_url = (
+            f"{YANDEX_DIALOGS_OAUTH_CODE_URL}"
+            f"&code_challenge={quote(challenge)}"
+            f"&code_challenge_method=S256"
+        )
+        return state, auth_url
+
+    def _load_pkce_verifier(self, state):
+        state = (state or '').strip()
+        if not state:
+            return None
+        path = findInCache(state, self.name)
+        if not path or not os.path.isfile(path):
+            return None
+        with open(path, 'rb') as f:
+            return f.read().decode('utf-8')
+
+    def _clear_pkce_verifier(self, state):
+        if state:
+            deleteFromCache(state.strip(), self.name)
+
+    def _exchange_authorization_code_for_tokens(self, raw_code, oauth_state=None, code_verifier=None):
+        """Обменять authorization code на access_token (PKCE)."""
+        code = self._parse_authorization_code(raw_code)
+        if not code:
+            return None, 'Authorization code is required'
+        verifier = (code_verifier or '').strip() or self._load_pkce_verifier(oauth_state)
+        if not verifier:
+            return None, 'Open authorization via the PKCE link first'
+        try:
+            response = requests.post(
+                YANDEX_OAUTH_TOKEN_ENDPOINT,
+                data={
+                    'grant_type': 'authorization_code',
+                    'code': code,
+                    'client_id': YANDEX_DIALOGS_OAUTH_CLIENT_ID,
+                    'redirect_uri': YANDEX_DIALOGS_OAUTH_REDIRECT_URI,
+                    'code_verifier': verifier,
+                },
+                timeout=Config.HTTP_REQUEST_TIMEOUT,
+            )
+            if response.status_code != 200:
+                self.logger.warning("YandexHome: code exchange failed: %s", response.text)
+                try:
+                    payload = response.json()
+                    error = payload.get('error_description') or payload.get('error') or response.text
+                except ValueError:
+                    error = response.text
+                return None, error
+            data = response.json()
+            access_token = data.get('access_token')
+            if not access_token:
+                return None, 'access_token missing in response'
+            self._clear_pkce_verifier(oauth_state)
+            return {
+                'access_token': access_token,
+                'refresh_token': data.get('refresh_token', ''),
+            }, None
+        except Exception as ex:
+            self.logger.exception("YandexHome: code exchange error")
+            return None, str(ex)
+
+    def _post_yandex_callback(self, endpoint, send):
+        """POST в API уведомлений Яндекс.Диалогов с обработкой ошибок авторизации."""
+        client_key = self.config.get("CLIENT_KEY", '')
+        if not client_key:
+            return None
+        skill = self.config.get('SKILL_ID', '')
+        if not skill:
+            self.logger.warning("YandexHome: SKILL_ID is not configured")
+            return None
+
+        url = f"https://dialogs.yandex.net/api/v1/skills/{skill}/callback/{endpoint}"
+        headers = {
+            'Content-type': 'application/json',
+            'Authorization': f"OAuth {client_key}",
+        }
+        response = requests.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
+
+        if response.status_code in (401, 403):
+            self._notify_auth_error(response)
+
+        return response
 
     def initialization(self):
         pass
@@ -104,6 +222,7 @@ class YandexHome(BasePlugin):
                 self.config["CLIENT_SECRET"] = settings.client_secret.data
                 self.config["CLIENT_KEY"] = settings.client_key.data
                 self.config["SKILL_ID"] = settings.skill_id.data
+                self.config.pop("CLIENT_REFRESH_KEY", None)
                 self.saveConfig()
         devices = YaHomeDevice.query.all()
         devs = {}
@@ -117,6 +236,7 @@ class YandexHome(BasePlugin):
         content = {
             "form": settings,
             "devices": devs,
+            "oauth_token_url": YANDEX_DIALOGS_OAUTH_TOKEN_URL,
         }
         return self.render('yandexhome_main.html', content)
 
@@ -304,31 +424,17 @@ class YandexHome(BasePlugin):
                         }
 
                         log_message = f"PropertySetHandle send: {json.dumps(send)}"
-                        self.logger.debug(log_message)  # Assuming WriteLog writes to the console or replace with appropriate logging function
-                        skill = self.config['SKILL_ID']
-                        url = f"https://dialogs.yandex.net/api/v1/skills/{skill}/callback/state"
-                        headers = {
-                            'Content-type': 'application/json',
-                            'Authorization': f"OAuth {client_key}"
-                        }
-
-                        response = requests.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
-
-                        self.logger.debug(f"PropertySetHandle send result: {response.text}")  # Assuming WriteLog writes to the console or replace with appropriate logging function
+                        self.logger.debug(log_message)
+                        response = self._post_yandex_callback('state', send)
+                        if response is not None:
+                            self.logger.debug(f"PropertySetHandle send result: {response.text}")
 
         if not find:
             removeLinkFromObject(obj,prop,self.name)
 
     def discovery(self):
-        client_key = self.config.get("CLIENT_KEY",'')
-        if client_key == '':
+        if self.config.get("CLIENT_KEY", '') == '':
             return
-        skill = self.config['SKILL_ID']
-        url = f"https://dialogs.yandex.net/api/v1/skills/{skill}/callback/discovery"
-        headers = {
-            'Content-type': 'application/json',
-            'Authorization': f"OAuth {client_key}"
-        }
         payload = {
             "user_id": self.config['USER_ID'],
         }
@@ -336,8 +442,9 @@ class YandexHome(BasePlugin):
             'ts': int(time.time()),
             'payload': payload
         }
-        response = requests.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
-        self.logger.info(f"Discovery send result: {response.text}")
+        response = self._post_yandex_callback('discovery', send)
+        if response is not None:
+            self.logger.info(f"Discovery send result: {response.text}")
 
     def delete_device(self, device_id):
         client_key = self.config.get("CLIENT_KEY",'')
@@ -351,6 +458,30 @@ class YandexHome(BasePlugin):
         self.logger.info(f"Delete send result: {response.text}")
 
     def route_index(self):
+        @self.blueprint.route('/YandexHome/oauth/start', methods=['GET'])
+        @handle_admin_required
+        def oauth_start():
+            state, auth_url = self._create_oauth_pkce_session()
+            return jsonify({'ok': True, 'state': state, 'auth_url': auth_url})
+
+        @self.blueprint.route('/YandexHome/oauth/exchange', methods=['POST'])
+        @handle_admin_required
+        def oauth_exchange():
+            data = request.get_json(silent=True) or {}
+            tokens, error = self._exchange_authorization_code_for_tokens(
+                data.get('code', ''),
+                oauth_state=data.get('oauth_state', ''),
+            )
+            if error:
+                return jsonify({'ok': False, 'error': error}), 400
+            self.config['CLIENT_KEY'] = tokens['access_token']
+            self.config.pop('CLIENT_REFRESH_KEY', None)
+            self.saveConfig()
+            return jsonify({
+                'ok': True,
+                'client_key': tokens['access_token'],
+            })
+
         @self.blueprint.route('/YandexHome/device', methods=['POST'])
         @self.blueprint.route('/YandexHome/device/<device_id>', methods=['GET', 'POST'])
         @handle_admin_required
