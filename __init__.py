@@ -257,7 +257,7 @@ class YandexHome(BasePlugin):
         config = {}
         config["id"] = str(device.id)
         config["name"] = device.title
-        config["type"] = PREFIX_TYPES + device.type
+        config["type"] = PREFIX_TYPES + device.type if device.type else ""
         config["room"] = device.room
         config["description"] = device.description
         config["device_info"] = {
@@ -491,24 +491,34 @@ class YandexHome(BasePlugin):
                 return jsonify(row2dict(dev))
             if request.method == "POST":
                 data = request.get_json()
+
+                title = (data.get('title') or '').strip()
+                device_type = (data.get('type') or '').strip()
+
+                if not title:
+                    return jsonify({'ok': False, 'error': 'Field "title" is required'}), 400
+                if not device_type:
+                    return jsonify({'ok': False, 'error': 'Field "type" is required'}), 400
+                if device_type not in devices_types:
+                    return jsonify({'ok': False, 'error': f'Invalid device type: {device_type}'}), 400
+
                 with session_scope() as session:
-                    if data['id']:
+                    if data.get('id'):
                         device = session.query(YaHomeDevice).where(YaHomeDevice.id == int(data['id'])).one()
                     else:
                         device = YaHomeDevice()
                         session.add(device)
                         session.commit()
 
-                    device.title = data['title']
-                    device.description = data['description']
-                    device.type = data['type']
-                    device.room = data['room']
-                    device.description = data['description']
-                    device.manufacturer = data['manufacturer']
-                    device.model = data['model']
-                    device.sw_version = data['sw_version']
-                    device.hw_version = data['hw_version']
-                    device.capability = json.dumps(data['capability'])
+                    device.title = title
+                    device.description = data.get('description', '')
+                    device.type = device_type
+                    device.room = data.get('room', '')
+                    device.manufacturer = data.get('manufacturer', '')
+                    device.model = data.get('model', '')
+                    device.sw_version = data.get('sw_version', '')
+                    device.hw_version = data.get('hw_version', '')
+                    device.capability = json.dumps(data.get('capability', {}))
                     device.config = json.dumps(self.generateConfig(device))
                     session.commit()
 
@@ -876,3 +886,69 @@ class YandexHome(BasePlugin):
     def random_string(self, stringLength=8):
         chars = string.ascii_letters + string.digits
         return ''.join(random.choice(chars) for i in range(stringLength))
+
+    # --- MCP integration ---
+
+    def mcp_capabilities(self):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_capabilities()
+
+    def mcp_config_schema(self):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_config_schema()
+
+    def mcp_entity_schema(self, collection: str):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_entity_schema(collection)
+
+    def mcp_list_entities(self, collection: str, query: str = None, limit: int = 100):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_list_entities(collection, query=query, limit=limit)
+
+    def mcp_get_entity(self, collection: str, entity_id):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_get_entity(collection, entity_id)
+
+    def mcp_upsert_entity(self, collection: str, payload: dict, entity_id=None):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_upsert_entity(collection, payload, entity_id=entity_id)
+
+    def mcp_delete_entity(self, collection: str, entity_id):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_delete_entity(collection, entity_id)
+
+    def mcp_validate_entity_code(self, collection: str, code: str):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_validate_entity_code(collection, code)
+
+    def mcp_run_entity_dry(self, collection: str, code: str, context: dict = None):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_run_entity_dry(collection, code, context=context)
+
+    def mcp_invoke(self, operation: str, params: dict = None):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_invoke(operation, params or {})
+
+    def mcp_entity_revision(self, collection: str, entity_id):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_entity_revision(collection, entity_id)
+
+    def mcp_validate_entity(self, collection: str, payload: dict, entity_id=None):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_validate_entity(collection, payload, entity_id=entity_id)
+
+    def mcp_tools(self):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_descriptors()[0]
+
+    def mcp_resources(self):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_descriptors()[1]
+
+    def mcp_prompts(self):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_descriptors()[2]
+
+    def mcp_get_prompt(self, name: str, arguments: dict = None):
+        from plugins.YandexHome import mcp_support
+        return mcp_support.mcp_get_prompt(name, arguments or {})

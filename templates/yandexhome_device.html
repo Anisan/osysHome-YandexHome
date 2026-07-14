@@ -14,8 +14,8 @@
 <div id="edit_device" v-cloak class="yh-device-form">
     <form @submit.prevent="updateDevice">
         <div class="input-group my-3">
-            <span class="input-group-text">{{ _('Name')}}</span>
-            <input type="text" class="form-control" v-model="device.title">
+            <span class="input-group-text">{{ _('Name')}} <span class="text-danger">*</span></span>
+            <input type="text" class="form-control" v-model="device.title" required>
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text">{{ _('Description')}}</span>
@@ -23,10 +23,10 @@
         </div>
         <div class="input-group mb-3 yh-type-row">
             <span class="input-group-text yh-type-label">
-                {{ _('Type')}}
-                <img :src="'/YandexHome/static/devices/'+ device.type +'.png'" class="yh-type-preview-img" :alt="device.type" onError="this.src='/YandexHome/static/YandexHome.png'"/>
+                {{ _('Type')}} <span class="text-danger">*</span>
+                <img :src="'/YandexHome/static/devices/'+ (device.type || 'unknown') +'.png'" class="yh-type-preview-img" :alt="device.type" onError="this.src='/YandexHome/static/YandexHome.png'"/>
             </span>
-            <select id="type-select" class="form-select" v-model="device.type">
+            <select id="type-select" class="form-select" v-model="device.type" required>
                 <option v-for="value,key in devices_types" :value="key" :key="key">
                     [[ value ]]
                 </option>
@@ -159,7 +159,7 @@
             </div>
         </div>
         <div class="yh-form-actions my-3 mt-3">
-            <button class="btn btn-success" type="submit" :disabled="isSaving">
+            <button class="btn btn-success" type="submit" :disabled="isSaving || !canSave">
                 <span v-if="isSaving" class="fas fa-rotate me-2" role="status" aria-hidden="true"></span>
                 {{ _('Save')}}
             </button>
@@ -206,6 +206,9 @@
                     list[key] = this.objects[key].description
                 });
                 return list
+            },
+            canSave(){
+                return this.device.title && this.device.title.trim() && this.device.type;
             }
         },
         methods: {
@@ -243,6 +246,10 @@
                     });
             },
             updateDevice() {
+                if (!this.canSave) {
+                    this.message = 'Please fill in all required fields (Name and Type).';
+                    return;
+                }
                 this.isSaving = true
                 this.message = 'Saving...'
                 axios.post(`/YandexHome/device/${this.device.id}`, this.device)
