@@ -54,8 +54,10 @@ class YandexHome(BasePlugin):
         self.title = "Yandex Home"
         self.description = """Yandex smart home"""
         self.category = "App"
-        self.version = "0.2"
+        self.version = "0.4"
         self.actions = ["search"]
+        # Reuse TCP/TLS sockets for Dialogs callbacks (avoids FD churn under high property rates)
+        self._http = requests.Session()
 
         self.last_code = None
         self.last_code_user = None
@@ -180,7 +182,7 @@ class YandexHome(BasePlugin):
             'Content-type': 'application/json',
             'Authorization': f"OAuth {client_key}",
         }
-        response = requests.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
+        response = self._http.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
 
         if response.status_code in (401, 403):
             self._notify_auth_error(response)
@@ -348,11 +350,12 @@ class YandexHome(BasePlugin):
         if client_key == '':
             return
 
-        find = False
+        # Collect payloads under DB session, then POST outside — never hold a
+        # connection open during network I/O (pool exhaustion / UI hangs).
+        sends = []
         with session_scope() as session:
             devices = session.query(YaHomeDevice).filter(YaHomeDevice.capability.contains(obj),YaHomeDevice.capability.contains(prop)).all()
             for device in devices:
-                dev = []
                 caps = json.loads(device.capability)
                 for instance, cap in caps.items():
                     if cap['linked_object'] == obj and cap['linked_property'] == prop:
@@ -360,7 +363,6 @@ class YandexHome(BasePlugin):
                         if 'reportable' not in cap or not cap['reportable']:
                             continue  # skip
 
-                        find = True
                         self.logger.debug("send value to yandexhome server %s %s",instance, value)
 
                         capabilities = []
@@ -407,30 +409,27 @@ class YandexHome(BasePlugin):
                                 'state': state
                             })
 
-                        dev.append({
-                            "id": str(device.id),
-                            'capabilities': capabilities,
-                            'properties': properties
+                        sends.append({
+                            'ts': int(time.time()),
+                            'payload': {
+                                "user_id": self.config['USER_ID'],
+                                "devices": [{
+                                    "id": str(device.id),
+                                    'capabilities': capabilities,
+                                    'properties': properties
+                                }],
+                            },
                         })
 
-                        payload = {
-                            "user_id": self.config['USER_ID'],
-                            "devices": dev
-                        }
-
-                        send = {
-                            'ts': int(time.time()),
-                            'payload': payload
-                        }
-
-                        log_message = f"PropertySetHandle send: {json.dumps(send)}"
-                        self.logger.debug(log_message)
-                        response = self._post_yandex_callback('state', send)
-                        if response is not None:
-                            self.logger.debug(f"PropertySetHandle send result: {response.text}")
-
-        if not find:
+        if not sends:
             removeLinkFromObject(obj,prop,self.name)
+            return
+
+        for send in sends:
+            self.logger.debug("PropertySetHandle send: %s", json.dumps(send))
+            response = self._post_yandex_callback('state', send)
+            if response is not None:
+                self.logger.debug("PropertySetHandle send result: %s", response.text)
 
     def discovery(self):
         if self.config.get("CLIENT_KEY", '') == '':
@@ -454,7 +453,7 @@ class YandexHome(BasePlugin):
         headers = {
             'Authorization': f"Bearer {client_key}"
         }
-        response = requests.delete(url, headers=headers, timeout=Config.HTTP_REQUEST_TIMEOUT)
+        response = self._http.delete(url, headers=headers, timeout=Config.HTTP_REQUEST_TIMEOUT)
         self.logger.info(f"Delete send result: {response.text}")
 
     def route_index(self):

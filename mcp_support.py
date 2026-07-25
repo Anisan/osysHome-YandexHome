@@ -229,7 +229,14 @@ def _merge_device_payload(payload: dict, entity_id=None) -> dict:
     return merged
 
 
-def mcp_entity_schema(collection: str) -> dict:
+def _find_device_by_title(session, title: str, exclude_id=None):
+    name = str(title or "").strip()
+    if not name:
+        return None
+    query = session.query(YaHomeDevice).filter(YaHomeDevice.title == name)
+    if exclude_id not in (None, ""):
+        query = query.filter(YaHomeDevice.id != int(exclude_id))
+    return query.order_by(YaHomeDevice.id).first()
     _collection_meta(collection)
     if collection == DEVICES:
         return {
@@ -322,8 +329,11 @@ def mcp_upsert_entity(collection: str, payload: dict, entity_id=None) -> dict:
                 raise ValueError(f"Device not found: {entity_id}")
             old_capability = _parse_capability(row.capability)
         else:
-            row = YaHomeDevice()
-            session.add(row)
+            title = str(clean_payload.get("title") or "").strip()
+            row = _find_device_by_title(session, title) if title else None
+            if row is None:
+                row = YaHomeDevice()
+                session.add(row)
 
         if "title" in clean_payload:
             row.title = clean_payload.get("title")
@@ -586,6 +596,19 @@ def mcp_validate_entity(collection: str, payload: dict, entity_id=None) -> dict:
             row = session.query(YaHomeDevice).filter(YaHomeDevice.id == int(entity_id)).one_or_none()
             if row is None:
                 errors.append({"field": "id", "message": f"device not found: {entity_id}"})
+
+    title = str(merged.get("title") or "").strip()
+    if title and entity_id in (None, ""):
+        with session_scope() as session:
+            duplicate = _find_device_by_title(session, title)
+            if duplicate is not None:
+                warnings.append({
+                    "field": "title",
+                    "message": (
+                        f"device title already exists: {title}; "
+                        f"upsert without entity_id will update id={duplicate.id}"
+                    ),
+                })
 
     if "capability" in payload:
         trait_errors = _validate_capability_traits(_parse_capability(payload.get("capability")))
