@@ -54,7 +54,7 @@ class YandexHome(BasePlugin):
         self.title = "Yandex Home"
         self.description = """Yandex smart home"""
         self.category = "App"
-        self.version = "0.4"
+        self.version = "0.5"
         self.actions = ["search"]
         # Reuse TCP/TLS sockets for Dialogs callbacks (avoids FD churn under high property rates)
         self._http = requests.Session()
@@ -430,6 +430,51 @@ class YandexHome(BasePlugin):
             response = self._post_yandex_callback('state', send)
             if response is not None:
                 self.logger.debug("PropertySetHandle send result: %s", response.text)
+
+    def changeObject(self, event, object_name, property_name, method_name, new_value):
+        # Capabilities live in YaHomeDevice.capability JSON (not plugin config.yaml).
+        with session_scope() as session:
+            devices = session.query(YaHomeDevice).filter(
+                YaHomeDevice.capability.contains(object_name)
+            ).all()
+            for device in devices:
+                try:
+                    caps = json.loads(device.capability or '{}')
+                except (TypeError, ValueError):
+                    continue
+                if not isinstance(caps, dict):
+                    continue
+                changed = False
+                for _instance, cap in caps.items():
+                    if not isinstance(cap, dict):
+                        continue
+                    if (cap.get('linked_object') or '') != object_name:
+                        continue
+                    if new_value is None and property_name is None and method_name is None:
+                        old_prop = cap.get('linked_property')
+                        if old_prop:
+                            removeLinkFromObject(object_name, old_prop, self.name)
+                        cap['linked_object'] = None
+                        cap['linked_property'] = None
+                        changed = True
+                    elif property_name is None and method_name is None:
+                        old_prop = cap.get('linked_property')
+                        if old_prop:
+                            removeLinkFromObject(object_name, old_prop, self.name)
+                        cap['linked_object'] = new_value
+                        if old_prop and new_value:
+                            setLinkToObject(new_value, old_prop, self.name)
+                        changed = True
+                    elif property_name:
+                        if (cap.get('linked_property') or '') == property_name:
+                            removeLinkFromObject(object_name, property_name, self.name)
+                            cap['linked_property'] = new_value
+                            if new_value:
+                                setLinkToObject(object_name, new_value, self.name)
+                            changed = True
+                if changed:
+                    device.capability = json.dumps(caps, ensure_ascii=False)
+            session.commit()
 
     def discovery(self):
         if self.config.get("CLIENT_KEY", '') == '':

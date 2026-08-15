@@ -237,6 +237,9 @@ def _find_device_by_title(session, title: str, exclude_id=None):
     if exclude_id not in (None, ""):
         query = query.filter(YaHomeDevice.id != int(exclude_id))
     return query.order_by(YaHomeDevice.id).first()
+
+
+def mcp_entity_schema(collection: str) -> dict:
     _collection_meta(collection)
     if collection == DEVICES:
         return {
