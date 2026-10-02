@@ -20,14 +20,33 @@
                 <p class="small mb-0 text-white-50">{{ _('Smart home devices and binding to osysHome objects')}}</p>
             </div>
         </div>
-        <div class="yh-toolbar-actions">
-            <a href="?op=add" class="btn btn-primary rounded-3" title="{{ _('Add device')}}">
-                <i class="fas fa-plus me-2"></i><span class="yh-btn-label">{{ _('Add device')}}</span>
-            </a>
-            <button type="button" class="btn btn-outline-light rounded-3 yh-btn-settings" data-bs-toggle="modal" data-bs-target="#exampleModal" title="{{ _('Settings')}}" aria-label="{{ _('Settings')}}">
-                <i class="fas fa-cog yh-btn-settings-icon"></i>
-                <span class="yh-btn-settings-label">{{ _('Settings')}}</span>
-            </button>
+        <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 ms-auto">
+            <div class="d-flex align-items-center gap-3 min-w-0 yh-batch-intro{% if not batch_status.enabled %} d-none{% endif %}" id="yh_batch_status_card" title="{{ _('State send queue')}}">
+                <div class="flex-shrink-0 rounded-3 bg-white bg-opacity-10 p-2 border border-white border-opacity-25 d-flex align-items-center justify-content-center yh-module-icon-wrap yh-batch-intro-icon">
+                    <i class="fas fa-cloud-upload-alt yh-batch-intro-glyph" aria-hidden="true"></i>
+                </div>
+                <div class="min-w-0 yh-module-intro-text">
+                    <div class="yh-batch-intro-title text-white fw-semibold">{{ _('State send queue')}}</div>
+                    <div class="yh-batch-intro-status small text-white-50">
+                        <span>{{ _('Status')}}:</span>
+                        <span class="badge rounded-pill yh-batch-compact-badge" id="yh_batch_status_badge">—</span>
+                    </div>
+                    <p class="small mb-0 text-white-50 yh-batch-intro-meta">
+                        <span id="yh_batch_queue_size">0</span><span class="yh-batch-compact-sep">/</span><span id="yh_batch_devices">0</span>
+                        <span class="yh-batch-compact-label">{{ _('dev')}}</span>
+                        <span class="yh-batch-compact-extra" id="yh_batch_extra"></span>
+                    </p>
+                </div>
+            </div>
+            <div class="yh-toolbar-actions">
+                <a href="?op=add" class="btn btn-primary rounded-3" title="{{ _('Add device')}}">
+                    <i class="fas fa-plus me-2"></i><span class="yh-btn-label">{{ _('Add device')}}</span>
+                </a>
+                <button type="button" class="btn btn-outline-light rounded-3 yh-btn-settings" data-bs-toggle="modal" data-bs-target="#exampleModal" title="{{ _('Settings')}}" aria-label="{{ _('Settings')}}">
+                    <i class="fas fa-cog yh-btn-settings-icon"></i>
+                    <span class="yh-btn-settings-label">{{ _('Settings')}}</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -87,8 +106,21 @@
                                     <td class="py-1 yh-col-type"><code class="small">{{ device.type }}</code></td>
                                     <td class="py-1 yh-col-links">
                                         {% for cap_key, item in device.caps.items() %}
-                                        <div>
-                                            <b>{{ cap_key }}</b> ({{ item.linked_object }}.{{ item.linked_property }})
+                                        <div class="yh-link-row">
+                                            {% set is_reportable = item.reportable is true or item.reportable == 1 or item.reportable == '1' or item.reportable == 'true' %}
+                                            {% if is_reportable %}
+                                            <span class="yh-reportable-badge text-primary" title="{{ _('Reportable')}}">
+                                                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                            </span>
+                                            {% else %}
+                                            <span class="yh-reportable-badge text-secondary" title="{{ _('Reportable')}}: {{ _('off')}}">
+                                                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                            </span>
+                                            {% endif %}
+                                            <span class="yh-link-text">
+                                                <b>{{ cap_key }}</b>
+                                                <span class="text-muted">({{ item.linked_object }}.{{ item.linked_property }})</span>
+                                            </span>
                                         </div>
                                         {% endfor %}
                                     </td>
@@ -145,9 +177,21 @@
                 {% if device.caps %}
                 <div class="yh-device-links mb-2">
                     {% for cap_key, item in device.caps.items() %}
-                    <div>
-                        <b>{{ cap_key }}</b>
-                        <span class="text-muted">({{ item.linked_object }}.{{ item.linked_property }})</span>
+                    <div class="yh-link-row">
+                        {% set is_reportable = item.reportable is true or item.reportable == 1 or item.reportable == '1' or item.reportable == 'true' %}
+                        {% if is_reportable %}
+                        <span class="yh-reportable-badge text-primary" title="{{ _('Reportable')}}">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                        </span>
+                        {% else %}
+                        <span class="yh-reportable-badge text-secondary" title="{{ _('Reportable')}}: {{ _('off')}}">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                        </span>
+                        {% endif %}
+                        <span class="yh-link-text">
+                            <b>{{ cap_key }}</b>
+                            <span class="text-muted">({{ item.linked_object }}.{{ item.linked_property }})</span>
+                        </span>
                     </div>
                     {% endfor %}
                 </div>
@@ -237,6 +281,16 @@
                                 <i class="fas fa-info-circle"></i>
                             </a>
                         </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3 form-check form-switch">
+                        {{ form.batch_state_enabled(class="form-check-input", id="batch_state_enabled") }}
+                        {{ form.batch_state_enabled.label(class="form-check-label", for="batch_state_enabled") }}
+                        <div class="form-text">{{ _('Accumulate property changes and send them in one callback/state request after the debounce interval. Failed sends are retried automatically.')}}</div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.batch_state_debounce.label(class="form-label") }}
+                        {{ form.batch_state_debounce(class="form-control", step="0.1", min="0.2", max="120") }}
                     </div>
                 </div>
                 <div class="modal-footer flex-wrap gap-2">
@@ -415,6 +469,94 @@ $(document).ready(function() {
         yhSetGroupCollapsed(groupKey, false);
         yhUpdateGroupChevron(groupKey, true);
     });
+
+    var YH_BATCH_STATUS_LABELS = {
+        disabled: '{{ _("disabled") }}',
+        idle: '{{ _("idle") }}',
+        pending: '{{ _("pending") }}',
+        sending: '{{ _("sending") }}',
+        retry_wait: '{{ _("retry wait") }}',
+        error: '{{ _("error") }}'
+    };
+    var YH_BATCH_STATUS_CLASSES = {
+        disabled: 'bg-secondary',
+        idle: 'bg-success',
+        pending: 'bg-primary',
+        sending: 'bg-info text-dark',
+        retry_wait: 'bg-warning text-dark',
+        error: 'bg-danger'
+    };
+
+    function yhFormatTime(ts) {
+        if (!ts) {
+            return '';
+        }
+        try {
+            return new Date(ts * 1000).toLocaleString();
+        } catch (e) {
+            return String(ts);
+        }
+    }
+
+    function yhRenderBatchStatus(data) {
+        if (!data) {
+            return;
+        }
+        var card = $('#yh_batch_status_card');
+        if (!data.enabled) {
+            card.addClass('d-none');
+            return;
+        }
+        card.removeClass('d-none');
+
+        var status = data.status || 'idle';
+        var badge = $('#yh_batch_status_badge');
+        badge
+            .attr('class', 'badge rounded-pill yh-batch-compact-badge ' + (YH_BATCH_STATUS_CLASSES[status] || 'bg-secondary'))
+            .text(YH_BATCH_STATUS_LABELS[status] || status);
+        $('#yh_batch_queue_size').text(data.queue_size != null ? data.queue_size : 0);
+        $('#yh_batch_devices').text(data.devices != null ? data.devices : 0);
+
+        var parts = [];
+        if (data.debounce_sec != null) {
+            parts.push(data.debounce_sec + 's');
+        }
+        if (data.retry_count) {
+            parts.push('{{ _("Retries") }}: ' + data.retry_count);
+        }
+        if (status === 'pending' && data.deadline_in != null) {
+            parts.push('{{ _("flush in") }} ' + Math.ceil(data.deadline_in) + 's');
+        }
+        if (status === 'retry_wait' && data.retry_in != null) {
+            parts.push('{{ _("retry in") }} ' + Math.ceil(data.retry_in) + 's');
+        }
+        if (data.last_error && (status === 'error' || status === 'retry_wait')) {
+            parts.push(data.last_error);
+        }
+        var extra = $('#yh_batch_extra');
+        if (parts.length) {
+            extra.text(parts.join(' · ')).attr('title', parts.join(' · '));
+        } else {
+            extra.text('').removeAttr('title');
+        }
+
+        var tip = ['{{ _("State send queue") }}', YH_BATCH_STATUS_LABELS[status] || status];
+        if (data.last_sent_at) {
+            tip.push('{{ _("Last sent") }}: ' + yhFormatTime(data.last_sent_at));
+        }
+        if (data.last_error) {
+            tip.push('{{ _("Last error") }}: ' + data.last_error);
+        }
+        card.attr('title', tip.join('\n'));
+    }
+
+    yhRenderBatchStatus({{ batch_status|tojson }});
+    setInterval(function() {
+        fetch('/YandexHome/batch_status')
+            .then(function(response) { return response.ok ? response.json() : null; })
+            .then(function(data) { if (data) yhRenderBatchStatus(data); })
+            .catch(function() {});
+    }, 2000);
 });
 </script>
 {% endblock %}

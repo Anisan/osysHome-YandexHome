@@ -130,6 +130,14 @@ def mcp_config_schema() -> dict:
                 "type": "string",
                 "description": "Yandex Dialogs skill ID for callback API",
             },
+            "BATCH_STATE_ENABLED": {
+                "type": "boolean",
+                "description": "Accumulate reportable state changes and send callback/state in batches",
+            },
+            "BATCH_STATE_DEBOUNCE": {
+                "type": "number",
+                "description": "Trailing debounce seconds before flushing the state queue (0.2–120)",
+            },
         },
         "additionalProperties": False,
     }

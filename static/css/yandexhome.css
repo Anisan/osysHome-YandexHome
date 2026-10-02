@@ -9,6 +9,106 @@
     flex: 0 0 auto;
 }
 
+.yh-batch-intro {
+    flex: 0 1 auto;
+    max-width: min(100%, 22rem);
+}
+
+.yh-batch-intro-glyph {
+    font-size: 1.35rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.yh-batch-intro-title {
+    font-size: 0.95rem;
+    line-height: 1.25;
+    margin-bottom: 0.2rem;
+}
+
+.yh-batch-intro-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.15rem;
+}
+
+.yh-batch-intro .yh-batch-compact-badge {
+    font-size: 0.7rem;
+    vertical-align: middle;
+}
+
+.yh-batch-intro-meta {
+    font-variant-numeric: tabular-nums;
+}
+
+.yh-batch-compact-sep {
+    opacity: 0.55;
+    margin: 0 0.15rem;
+}
+
+.yh-batch-compact-label {
+    opacity: 0.75;
+    margin-left: 0.2rem;
+}
+
+.yh-batch-compact-extra {
+    display: none;
+}
+
+.yh-batch-compact-extra:not(:empty)::before {
+    content: " · ";
+    opacity: 0.55;
+}
+
+.yh-batch-compact-extra:not(:empty) {
+    display: inline;
+}
+
+@media (max-width: 767.98px) {
+    .yh-batch-compact-extra {
+        display: none !important;
+    }
+
+    .yh-batch-intro {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+.yh-link-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    margin-bottom: 0.15rem;
+}
+
+.yh-link-text {
+    min-width: 0;
+}
+
+.yh-reportable-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.yh-reportable-badge.text-primary,
+.yh-reportable-badge.text-primary i {
+    color: var(--bs-primary, #0d6efd) !important;
+}
+
+.yh-reportable-badge.text-secondary,
+.yh-reportable-badge.text-secondary i {
+    color: #adb5bd !important;
+}
+
 .yh-module-header .yh-toolbar-actions .btn {
     display: inline-flex;
     align-items: center;

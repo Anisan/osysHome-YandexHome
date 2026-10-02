@@ -11,6 +11,7 @@ import string
 import random
 import json
 import secrets
+import threading
 import requests
 import urllib
 import traceback
@@ -54,8 +55,8 @@ class YandexHome(BasePlugin):
         self.title = "Yandex Home"
         self.description = """Yandex smart home"""
         self.category = "App"
-        self.version = "0.5"
-        self.actions = ["search"]
+        self.version = "0.8"
+        self.actions = ["search", "cycle"]
         # Reuse TCP/TLS sockets for Dialogs callbacks (avoids FD churn under high property rates)
         self._http = requests.Session()
 
@@ -63,6 +64,98 @@ class YandexHome(BasePlugin):
         self.last_code_user = None
         self.last_code_time = None
         self._auth_error_notified_at = 0
+        # Min interval between float state reports per device+instance (immediate mode only)
+        self._float_report_cooldown_sec = 5.0
+        self._last_float_report_at = {}
+
+        # Optional batched callback/state queue (debounce + retry)
+        self._state_queue_lock = threading.Lock()
+        self._state_queue = {}  # device_id -> {capabilities, properties, ts}
+        self._batch_deadline = None
+        self._batch_retry_after = None
+        self._batch_retry_count = 0
+        self._batch_status = 'idle'
+        self._batch_last_error = None
+        self._batch_last_sent_at = None
+        self._batch_last_result = None
+
+    def _batch_enabled(self):
+        return bool(self.config.get('BATCH_STATE_ENABLED', False))
+
+    def _batch_debounce_sec(self):
+        try:
+            value = float(self.config.get('BATCH_STATE_DEBOUNCE', 2.0) or 2.0)
+        except (TypeError, ValueError):
+            value = 2.0
+        return max(0.2, min(value, 120.0))
+
+    def _batch_status_snapshot(self):
+        with self._state_queue_lock:
+            queue_size = 0
+            for entry in self._state_queue.values():
+                queue_size += len(entry.get('capabilities', {}))
+                queue_size += len(entry.get('properties', {}))
+            return {
+                'enabled': self._batch_enabled(),
+                'debounce_sec': self._batch_debounce_sec(),
+                'queue_size': queue_size,
+                'devices': len(self._state_queue),
+                'status': self._batch_status if self._batch_enabled() else 'disabled',
+                'retry_count': self._batch_retry_count,
+                'last_error': self._batch_last_error,
+                'last_sent_at': self._batch_last_sent_at,
+                'last_result': self._batch_last_result,
+                'deadline_in': (
+                    max(0.0, self._batch_deadline - time.time())
+                    if self._batch_deadline else None
+                ),
+                'retry_in': (
+                    max(0.0, self._batch_retry_after - time.time())
+                    if self._batch_retry_after else None
+                ),
+            }
+
+    def _is_auth_failure(self, response):
+        """True только при явной ошибке OAuth-токена (не любой 403)."""
+        if response is None:
+            return False
+        if response.status_code == 401:
+            return True
+        if response.status_code != 403:
+            return False
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+        blob = ' '.join([
+            str(data.get('error_code', '')),
+            str(data.get('error_message', '')),
+            str(data.get('message', '')),
+            (response.text or '')[:400],
+        ]).lower()
+        markers = (
+            'unauthorized',
+            'invalid_token',
+            'invalid token',
+            'token expired',
+            'expired token',
+            'access token',
+            'oauth',
+            'authentication',
+            'not authenticated',
+        )
+        return any(marker in blob for marker in markers)
+
+    def _classify_callback_response(self, response):
+        if response is None:
+            return 'retry'
+        if response.status_code in (200, 202):
+            return 'ok'
+        if self._is_auth_failure(response):
+            return 'auth'
+        if response.status_code == 429 or response.status_code >= 500:
+            return 'retry'
+        return 'error'
 
     def _notify_auth_error(self, response):
         """Уведомить администратора об истёкшем OAuth-токене (не чаще раза в час)."""
@@ -182,12 +275,170 @@ class YandexHome(BasePlugin):
             'Content-type': 'application/json',
             'Authorization': f"OAuth {client_key}",
         }
-        response = self._http.post(url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT)
+        try:
+            response = self._http.post(
+                url, headers=headers, json=send, timeout=Config.HTTP_REQUEST_TIMEOUT
+            )
+        except requests.exceptions.Timeout as ex:
+            self.logger.warning(
+                "YandexHome: callback/%s timed out after %ss: %s",
+                endpoint, Config.HTTP_REQUEST_TIMEOUT, ex,
+            )
+            return None
+        except requests.exceptions.RequestException as ex:
+            self.logger.warning(
+                "YandexHome: callback/%s request failed: %s", endpoint, ex
+            )
+            return None
 
-        if response.status_code in (401, 403):
+        if self._is_auth_failure(response):
             self._notify_auth_error(response)
+        elif response.status_code >= 400:
+            self.logger.warning(
+                "YandexHome: callback/%s HTTP %s: %s",
+                endpoint, response.status_code, response.text[:300],
+            )
 
         return response
+
+    def _enqueue_state_update(self, device_id, capabilities, properties):
+        """Accumulate latest capability/property states for a device (trailing debounce)."""
+        device_id = str(device_id)
+        now = time.time()
+        with self._state_queue_lock:
+            entry = self._state_queue.setdefault(device_id, {
+                'capabilities': {},
+                'properties': {},
+                'ts': now,
+            })
+            entry['ts'] = now
+            for item in capabilities or []:
+                state = item.get('state') or {}
+                key = (item.get('type'), state.get('instance'))
+                entry['capabilities'][key] = item
+            for item in properties or []:
+                state = item.get('state') or {}
+                key = (item.get('type'), state.get('instance'))
+                entry['properties'][key] = item
+            self._batch_deadline = now + self._batch_debounce_sec()
+            self._batch_retry_after = None
+            if self._batch_status not in ('sending',):
+                self._batch_status = 'pending'
+
+    def _flush_state_queue(self, force=False):
+        """Send accumulated callback/state payload; retry on transient failures."""
+        if not self._batch_enabled() and not force:
+            return
+
+        with self._state_queue_lock:
+            if not self._state_queue:
+                self._batch_status = 'idle'
+                self._batch_deadline = None
+                self._batch_retry_after = None
+                return
+            now = time.time()
+            if self._batch_retry_after and now < self._batch_retry_after and not force:
+                self._batch_status = 'retry_wait'
+                return
+            if self._batch_deadline and now < self._batch_deadline and not force:
+                self._batch_status = 'pending'
+                return
+            # Take ownership so updates during HTTP land in a fresh queue.
+            pending = self._state_queue
+            self._state_queue = {}
+            self._batch_deadline = None
+            send = {
+                'ts': time.time(),
+                'payload': {
+                    'user_id': self.config.get('USER_ID', ''),
+                    'devices': [{
+                        'id': str(device_id),
+                        'capabilities': list(entry.get('capabilities', {}).values()),
+                        'properties': list(entry.get('properties', {}).values()),
+                    } for device_id, entry in pending.items()],
+                },
+            }
+            self._batch_status = 'sending'
+
+        self.logger.debug("YandexHome batch state send: %s", json.dumps(send))
+        response = self._post_yandex_callback('state', send)
+        outcome = self._classify_callback_response(response)
+
+        with self._state_queue_lock:
+            if outcome == 'ok':
+                self._batch_retry_after = None
+                self._batch_retry_count = 0
+                self._batch_last_error = None
+                self._batch_last_sent_at = time.time()
+                self._batch_last_result = 'ok'
+                self._batch_status = 'pending' if self._state_queue else 'idle'
+                if self._state_queue and self._batch_deadline is None:
+                    self._batch_deadline = time.time() + self._batch_debounce_sec()
+                return
+
+            # Merge failed batch back; newer queued values win.
+            for device_id, entry in pending.items():
+                current = self._state_queue.setdefault(device_id, {
+                    'capabilities': {},
+                    'properties': {},
+                    'ts': entry.get('ts', time.time()),
+                })
+                for key, item in entry.get('capabilities', {}).items():
+                    current['capabilities'].setdefault(key, item)
+                for key, item in entry.get('properties', {}).items():
+                    current['properties'].setdefault(key, item)
+                current['ts'] = max(current.get('ts', 0), entry.get('ts', 0))
+
+            detail = None
+            if response is not None:
+                detail = f"HTTP {response.status_code}: {(response.text or '')[:200]}"
+            else:
+                detail = 'timeout or network error'
+
+            self._batch_last_error = detail
+            self._batch_last_result = outcome
+            self._batch_retry_count += 1
+
+            if outcome == 'auth':
+                self._batch_status = 'error'
+                self._batch_retry_after = time.time() + 60
+                self._batch_deadline = None
+                return
+
+            if outcome == 'error':
+                self._batch_status = 'error'
+                if self._batch_retry_count >= 3:
+                    self.logger.error(
+                        "YandexHome: dropping batch state queue after %s errors: %s",
+                        self._batch_retry_count, detail,
+                    )
+                    self._state_queue.clear()
+                    self._batch_deadline = None
+                    self._batch_retry_after = None
+                    self._batch_retry_count = 0
+                    self._batch_status = 'idle'
+                else:
+                    delay = min(30, 2 ** self._batch_retry_count)
+                    self._batch_retry_after = time.time() + delay
+                return
+
+            delay = min(60, 2 ** min(self._batch_retry_count, 5))
+            self._batch_retry_after = time.time() + delay
+            self._batch_deadline = None
+            self._batch_status = 'retry_wait'
+            self.logger.warning(
+                "YandexHome: batch state retry in %.1fs (%s)", delay, detail,
+            )
+
+    def cyclic_task(self):
+        try:
+            if self._batch_enabled():
+                self._flush_state_queue()
+            elif self._state_queue:
+                # Batch turned off with leftover items — flush once.
+                self._flush_state_queue(force=True)
+        finally:
+            self.event.wait(0.5)
 
     def initialization(self):
         pass
@@ -216,6 +467,13 @@ class YandexHome(BasePlugin):
             settings.client_secret.data = self.config.get("CLIENT_SECRET",'')
             settings.client_key.data = self.config.get("CLIENT_KEY",'')
             settings.skill_id.data = self.config.get("SKILL_ID",'')
+            settings.batch_state_enabled.data = bool(self.config.get('BATCH_STATE_ENABLED', False))
+            try:
+                settings.batch_state_debounce.data = float(
+                    self.config.get('BATCH_STATE_DEBOUNCE', 2.0) or 2.0
+                )
+            except (TypeError, ValueError):
+                settings.batch_state_debounce.data = 2.0
         else:
             if settings.validate_on_submit():
                 self.config["USER_ID"] = settings.user_id.data
@@ -224,6 +482,12 @@ class YandexHome(BasePlugin):
                 self.config["CLIENT_SECRET"] = settings.client_secret.data
                 self.config["CLIENT_KEY"] = settings.client_key.data
                 self.config["SKILL_ID"] = settings.skill_id.data
+                self.config["BATCH_STATE_ENABLED"] = bool(settings.batch_state_enabled.data)
+                try:
+                    debounce = float(settings.batch_state_debounce.data or 2.0)
+                except (TypeError, ValueError):
+                    debounce = 2.0
+                self.config["BATCH_STATE_DEBOUNCE"] = max(0.2, min(debounce, 120.0))
                 self.config.pop("CLIENT_REFRESH_KEY", None)
                 self.saveConfig()
         devices = YaHomeDevice.query.all()
@@ -239,6 +503,7 @@ class YandexHome(BasePlugin):
             "form": settings,
             "devices": devs,
             "oauth_token_url": YANDEX_DIALOGS_OAUTH_TOKEN_URL,
+            "batch_status": self._batch_status_snapshot(),
         }
         return self.render('yandexhome_main.html', content)
 
@@ -363,6 +628,16 @@ class YandexHome(BasePlugin):
                         if 'reportable' not in cap or not cap['reportable']:
                             continue  # skip
 
+                        cap_kind = devices_instance[cap['type']]['capability']
+                        # Float throttle only in immediate mode; batch mode uses debounce.
+                        if not self._batch_enabled() and cap_kind == 'float':
+                            report_key = (device.id, cap['type'])
+                            now = time.time()
+                            last_at = self._last_float_report_at.get(report_key, 0)
+                            if now - last_at < self._float_report_cooldown_sec:
+                                continue
+                            self._last_float_report_at[report_key] = now
+
                         self.logger.debug("send value to yandexhome server %s %s",instance, value)
 
                         capabilities = []
@@ -370,7 +645,7 @@ class YandexHome(BasePlugin):
                         state = {}
 
                         # send new value
-                        if devices_instance[cap['type']]['capability'] in ['float', 'event']:
+                        if cap_kind in ['float', 'event']:
                             instance = cap['type'].replace('_sensor', '')
                             instance = instance.replace('_event', '')
                             state['instance'] = instance
@@ -398,19 +673,22 @@ class YandexHome(BasePlugin):
                         else:
                             state['value'] = value
 
-                        if devices_instance[cap['type']]['capability'] in ['float', 'event']:
+                        if cap_kind in ['float', 'event']:
                             properties.append({
-                                'type': f"{PREFIX_PROPERTIES}{devices_instance[cap['type']]['capability']}",
+                                'type': f"{PREFIX_PROPERTIES}{cap_kind}",
                                 'state': state
                             })
                         else:
                             capabilities.append({
-                                'type': f"{PREFIX_CAPABILITIES}{devices_instance[cap['type']]['capability']}",
+                                'type': f"{PREFIX_CAPABILITIES}{cap_kind}",
                                 'state': state
                             })
 
                         sends.append({
-                            'ts': int(time.time()),
+                            'device_id': str(device.id),
+                            'capabilities': capabilities,
+                            'properties': properties,
+                            'ts': time.time(),
                             'payload': {
                                 "user_id": self.config['USER_ID'],
                                 "devices": [{
@@ -425,9 +703,20 @@ class YandexHome(BasePlugin):
             removeLinkFromObject(obj,prop,self.name)
             return
 
+        if self._batch_enabled():
+            for send in sends:
+                self._enqueue_state_update(
+                    send['device_id'], send['capabilities'], send['properties']
+                )
+            return
+
         for send in sends:
-            self.logger.debug("PropertySetHandle send: %s", json.dumps(send))
-            response = self._post_yandex_callback('state', send)
+            payload = {
+                'ts': send['ts'],
+                'payload': send['payload'],
+            }
+            self.logger.debug("PropertySetHandle send: %s", json.dumps(payload))
+            response = self._post_yandex_callback('state', payload)
             if response is not None:
                 self.logger.debug("PropertySetHandle send result: %s", response.text)
 
@@ -483,7 +772,7 @@ class YandexHome(BasePlugin):
             "user_id": self.config['USER_ID'],
         }
         send = {
-            'ts': int(time.time()),
+            'ts': time.time(),
             'payload': payload
         }
         response = self._post_yandex_callback('discovery', send)
@@ -525,6 +814,11 @@ class YandexHome(BasePlugin):
                 'ok': True,
                 'client_key': tokens['access_token'],
             })
+
+        @self.blueprint.route('/YandexHome/batch_status', methods=['GET'])
+        @handle_admin_required
+        def batch_status():
+            return jsonify(self._batch_status_snapshot())
 
         @self.blueprint.route('/YandexHome/device', methods=['POST'])
         @self.blueprint.route('/YandexHome/device/<device_id>', methods=['GET', 'POST'])
